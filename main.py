@@ -15,7 +15,7 @@ def main():
     app = wx.App()
 
     main_window = MainWindow()
-    main_window.show()
+    main_window.Show()
 
     app.MainLoop()
 

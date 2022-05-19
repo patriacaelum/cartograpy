@@ -2,16 +2,33 @@
 
 
 import os
+import shutil
 
-from wx import wx
+from dataclasses import dataclass
 
-from canvas import Canvas
-from inspector import Inspector
+import wx
+
+from cartograpy import ROOT_DIR, ASSET_DIR, ALL_EXPAND
+from cartograpy import EVT_ADD_LAYER, EVT_DUPLICATE_LAYER, EVT_REMOVE_LAYER, EVT_UPDATE_CANVAS
+from cartograpy import AddLayerEvent, DuplicateLayerEvent, RemoveLayerEvent, UpdateCanvasEvent
+from cartograpy.canvas import Canvas
+from cartograpy.inspector import Inspector
 
 
-ROOT_DIR = os.path.dirname(__file__)
+@dataclass
+class Rect:
+    x: int = 0
+    y: int = 0
+    w: int = 0
+    h: int = 0
 
-ALL_EXPAND = wx.ALL | wx.EXPAND
+    def to_dict(self):
+        return {
+            "x": self.x,
+            "y": self.y,
+            "w": self.w,
+            "h": self.h,
+        }
 
 
 class MainWindow(wx.Frame):
@@ -29,6 +46,7 @@ class MainWindow(wx.Frame):
       - The properties of the currently selected layer.
       - A list of layers corresponding to the graphics shown on the canvas.
     - The canvas where the graphics are rendered in the centre of the window.
+
     """
 
     def __init__(self):
@@ -36,19 +54,60 @@ class MainWindow(wx.Frame):
             parent=None,
             title="cartograpy",
             size=wx.Size(640, 480),
-            style=wx.DEFAULT_FRAME_STYLE | wx.CLIP_CHILDRREN,
+            style=wx.DEFAULT_FRAME_STYLE | wx.CLIP_CHILDREN,
         )
 
         self.Centre(wx.BOTH)
         self.Maximize()
+        self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
         self.SetDoubleBuffered(True)
         self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
 
         self.canvas = Canvas(parent=self)
         self.inspector = Inspector(parent=self)
 
-        self.__size_widgets()
         self.__init_toolbar()
+        self.__size_widgets()
+
+        self.Bind(EVT_ADD_LAYER, self.__on_add_layer)
+        self.Bind(EVT_DUPLICATE_LAYER, self.__on_duplicate_layer)
+        self.Bind(EVT_REMOVE_LAYER, self.__on_remove_layer)
+        self.Bind(EVT_UPDATE_CANVAS, self.__on_update_canvas)
+
+        self.counter = 0
+        self.images = dict()
+        self.filenames = dict()
+
+        self.temp_dir = os.path.join(ROOT_DIR, "temp")
+        shutil.rmtree(self.temp_dir)
+        os.mkdir(self.temp_dir)
+
+    def __add_layer(self, position: int, bitmap: wx.Bitmap, destination: Rect, path: str = None):
+        """Updates the canvas and inspector with a new layer.
+
+        Parameters
+        ------------
+        position: int
+            the position of the new layer.
+        bitmap: wx.Bitmap
+            the image.
+        destination: Rect
+            the rendering location of the bitmap.
+        path: str
+            the path to the file of the bitmap.
+        """
+        # Update inspector
+        self.inspector.layers.InsertItem(position, f"layer_{self.counter}")
+        self.inspector.layers.SetItemData(position, self.counter)
+        self.inspector.layers.Select(position)
+
+        # Update canvas
+        self.canvas.paths[self.counter] = path
+        self.canvas.bitmaps[path] = bitmap
+        self.canvas.destinations[self.counter] = destination
+
+        self.counter += 1
+        self.__update_render_order()
 
     def __init_toolbar(self):
         """Initializes the toolbar.
@@ -62,8 +121,8 @@ class MainWindow(wx.Frame):
         - Colourpicker
 
         """
-        tool_move_asset = os.path.join(ROOT_DIR, "assets/tool_move.png")
-        tool_colourpicker_asset = os.path.join(ROOT_DIR, "assets/tool_colourpicker.png")
+        move_bitmap = wx.Bitmap(name=os.path.join(ASSET_DIR, "tool_move.png"))
+        colourpicker_bitmap = wx.Bitmap(name=os.path.join(ASSET_DIR, "tool_colourpicker.png"))
 
         self.toolbar = self.CreateToolBar(
             style=wx.TB_VERTICAL,
@@ -73,7 +132,7 @@ class MainWindow(wx.Frame):
         self.tool_move = self.toolbar.AddTool(
             toolId=wx.ID_ANY,
             label="Move",
-            bitmap=wx.Bitmap(name=tool_colourpicker_asset),
+            bitmap=move_bitmap,
             kind=wx.ITEM_CHECK,
         )
 
@@ -82,14 +141,109 @@ class MainWindow(wx.Frame):
         self.tool_colourpicker = self.toolbar.AddTool(
             toolId=wx.ID_ANY,
             label="Colourpicker",
-            bitmap=wx.Bitmap(name=tool_move_asset),
+            bitmap=colourpicker_bitmap,
             kind=wx.ITEM_NORMAL,
         )
 
         self.toolbar.Realize()
 
+    def __on_add_layer(self, event: AddLayerEvent):
+        """Adds a layer from an image file.
+
+        Parameters
+        ------------
+        event: AddLayerEvent
+            the event is expected to have a `path` property.
+        """
+        layer_name = str(self.counter)
+
+        # Copy image to temporary directory
+        temp_file = os.path.join(self.temp_dir, layer_name)
+        shutil.copyfile(event.path, temp_file)
+
+        # Load image file
+        bitmap = wx.Bitmap(name=temp_file)
+        destination = Rect(w=bitmap.GetWidth(), h=bitmap.GetHeight())
+
+        # Update inspector
+        self.inspector.layers.InsertItem(0, f"layer_{self.counter}")
+        self.inspector.layers.SetItemData(0, self.counter)
+        self.inspector.layers.Select(0)
+
+        # Update canvas
+        self.canvas.paths[self.counter] = temp_file
+        self.canvas.bitmaps[temp_file] = bitmap
+        self.canvas.destinations[self.counter] = destination
+
+        self.counter += 1
+        self.__update_render_order()
+
+    def __on_duplicate_layer(self, event: DuplicateLayerEvent):
+        """Duplicates the currently selected layer.
+
+        Parameters
+        ------------
+        event: DuplicateLayerEvent
+        """
+        selected = self.inspector.layers.GetFirstSelected()
+
+        # Get original
+        selected_data = self.inspector.layers.GetItemData(selected)
+        path = self.canvas.paths[selected_data]
+        destination = self.canvas.destinations[selected_data]
+
+        # Update inspector
+        self.inspector.layers.InsertItem(selected, f"layer_{self.counter}")
+        self.inspector.layers.SetItemData(selected, self.counter)
+        self.inspector.layers.Select(selected)
+
+        # Update canvas
+        self.canvas.paths[self.counter] = path
+        self.canvas.destinations[self.counter] = destination
+
+        self.counter += 1
+        self.__update_render_order()
+
+    def __on_remove_layer(self, event: RemoveLayerEvent):
+        """Removes the currently selected layer.
+
+        If there are no more references to the image layer, the image file is
+        removed from the temporary directory.
+
+        Parameters
+        ------------
+        event: RemoveLayerEvent
+        """
+        selected = self.inspector.layers.GetFirstSelected()
+        item_data = self.inspector.layers.GetItemData(selected)
+
+        # Update inspector
+        self.inspector.layers.DeleteItem(selected)
+        self.inspector.layers.Select(selected)
+
+        # Update canvas
+        path = self.canvas.paths[item_data]
+
+        del self.canvas.paths[item_data]
+        del self.canvas.destinations[item_data]
+
+        if path not in self.canvas.paths.values():
+            del self.canvas.bitmaps[path]
+            os.remove(path)
+
+        self.__update_render_order()
+
+    def __on_update_canvas(self, event: UpdateCanvasEvent):
+        """Updates the canvas.
+
+        Parameters
+        ------------
+        event: UpdateCanvasEvent
+        """
+        self.__update_render_order()
+
     def __size_widgets(self):
-        """Creates the layout for the canvas and inspector."""
+        """Generates the layout for the canvas and inspector."""
         sizer = wx.BoxSizer(orient=wx.HORIZONTAL)
 
         sizer.Add(
@@ -107,3 +261,11 @@ class MainWindow(wx.Frame):
 
         self.SetSizer(sizer)
         self.Layout()
+
+    def __update_render_order(self):
+        """Updates the render order in the canvas from the inspector."""
+        n_layers = self.inspector.layers.GetItemCount()
+        render_order = [self.inspector.layers.GetItemData(i) for i in range(n_layers)]
+        self.canvas.render_order = list(reversed(render_order))
+
+        self.Refresh()
