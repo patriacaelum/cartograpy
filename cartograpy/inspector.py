@@ -4,8 +4,8 @@
 import wx
 
 from cartograpy import ALL_EXPAND
-from cartograpy import EVT_ADD_LAYER, EVT_BACKWARD_LAYER, EVT_DUPLICATE_LAYER, EVT_FORWARD_LAYER, EVT_REMOVE_LAYER, EVT_UPDATE_CANVAS
-from cartograpy import AddLayerEvent, BackwardLayerEvent, DuplicateLayerEvent, ForwardLayerEvent, RemoveLayerEvent, UpdateCanvasEvent
+from cartograpy import EVT_LAYER_ADD, EVT_LAYER_BACKWARD, EVT_LAYER_DUPLICATE, EVT_LAYER_FORWARD, EVT_LAYER_REMOVE, EVT_UPDATE_CANVAS
+from cartograpy import LayerAddEvent, LayerBackwardEvent, LayerDuplicateEvent, LayerForwardEvent, LayerRemoveEvent, UpdateCanvasEvent
 from cartograpy.layer_menu import LayerMenu
 
 
@@ -45,11 +45,13 @@ class Inspector(wx.Panel):
         self.__init_layers()
         self.__size_widgets()
 
-        self.Bind(EVT_ADD_LAYER, self.__on_add_layer)
-        self.Bind(EVT_BACKWARD_LAYER, self.__on_backward_layer)
-        self.Bind(EVT_DUPLICATE_LAYER, self.__on_duplicate_layer)
-        self.Bind(EVT_FORWARD_LAYER, self.__on_forward_layer)
-        self.Bind(EVT_REMOVE_LAYER, self.__on_remove_layer)
+        self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.__on_list_item_activated)
+
+        self.Bind(EVT_LAYER_ADD, self.__on_layer_add)
+        self.Bind(EVT_LAYER_BACKWARD, self.__on_layer_backward)
+        self.Bind(EVT_LAYER_DUPLICATE, self.__on_layer_duplicate)
+        self.Bind(EVT_LAYER_FORWARD, self.__on_layer_forward)
+        self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
 
     def __init_layers(self):
         """Initializes the layer controller."""
@@ -66,22 +68,22 @@ class Inspector(wx.Panel):
         self.layers.EnableCheckBoxes()
         self.layers.InsertColumn(col=0, heading="Name", width=400)
 
-    def __on_add_layer(self, event: AddLayerEvent):
+    def __on_layer_add(self, event: LayerAddEvent):
         """Adds a layer from an image file.
 
         Parameters
         ------------
-        event: AddLayerEvent
+        event: LayerAddEvent
             the event is expected to have a `path` property.
         """
         wx.PostEvent(self.Parent, event)
 
-    def __on_backward_layer(self, event: BackwardLayerEvent):
+    def __on_layer_backward(self, event: LayerBackwardEvent):
         """Moves a layer backward.
 
         Parameters
         ------------
-        event: BackwardLayerEvent
+        event: LayerBackwardEvent
         """
         selected = self.layers.GetFirstSelected()
         n_layers = self.layers.GetItemCount()
@@ -98,21 +100,21 @@ class Inspector(wx.Panel):
 
             wx.PostEvent(self.Parent, UpdateCanvasEvent())
 
-    def __on_duplicate_layer(self, event: DuplicateLayerEvent):
+    def __on_layer_duplicate(self, event: LayerDuplicateEvent):
         """Duplicates the currently selected layer.
 
         Parameters
         ------------
-        event: DuplicateLayerEvent
+        event: LayerDuplicateEvent
         """
         wx.PostEvent(self.Parent, event)
 
-    def __on_forward_layer(self, event: ForwardLayerEvent):
+    def __on_layer_forward(self, event: LayerForwardEvent):
         """Moves a layer forward.
 
         Parameters
         ------------
-        event: ForwardLayerEvent
+        event: LayerForwardEvent
         """
         selected = self.layers.GetFirstSelected()
 
@@ -128,14 +130,24 @@ class Inspector(wx.Panel):
 
             wx.PostEvent(self.Parent, UpdateCanvasEvent())
 
-    def __on_remove_layer(self, event: RemoveLayerEvent):
+    def __on_layer_remove(self, event: LayerRemoveEvent):
         """Removes the currently selected layer.
 
         Parameters
         ------------
-        event: RemoveLayerEvent
+        event: LayerRemoveEvent
         """
         wx.PostEvent(self.Parent, event)
+
+    def __on_list_item_activated(self, event: wx.ListEvent):
+        """Renames the item when double clicked.
+
+        Parameters
+        ------------
+        event: wx.ListEvent
+        """
+        index = event.GetIndex()
+        self.layers.EditLabel(index)
 
     def __size_widgets(self):
         """Generates the layout for the inspector panel."""

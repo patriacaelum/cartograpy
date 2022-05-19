@@ -9,8 +9,8 @@ from dataclasses import dataclass
 import wx
 
 from cartograpy import ROOT_DIR, ASSET_DIR, ALL_EXPAND
-from cartograpy import EVT_ADD_LAYER, EVT_DUPLICATE_LAYER, EVT_REMOVE_LAYER, EVT_UPDATE_CANVAS
-from cartograpy import AddLayerEvent, DuplicateLayerEvent, RemoveLayerEvent, UpdateCanvasEvent
+from cartograpy import EVT_LAYER_ADD, EVT_LAYER_DUPLICATE, EVT_LAYER_REMOVE, EVT_UPDATE_CANVAS
+from cartograpy import LayerAddEvent, LayerDuplicateEvent, LayerRemoveEvent, UpdateCanvasEvent
 from cartograpy.canvas import Canvas
 from cartograpy.inspector import Inspector
 
@@ -69,9 +69,9 @@ class MainWindow(wx.Frame):
         self.__init_toolbar()
         self.__size_widgets()
 
-        self.Bind(EVT_ADD_LAYER, self.__on_add_layer)
-        self.Bind(EVT_DUPLICATE_LAYER, self.__on_duplicate_layer)
-        self.Bind(EVT_REMOVE_LAYER, self.__on_remove_layer)
+        self.Bind(EVT_LAYER_ADD, self.__on_layer_add)
+        self.Bind(EVT_LAYER_DUPLICATE, self.__on_layer_duplicate)
+        self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
         self.Bind(EVT_UPDATE_CANVAS, self.__on_update_canvas)
 
         self.counter = 0
@@ -81,33 +81,6 @@ class MainWindow(wx.Frame):
         self.temp_dir = os.path.join(ROOT_DIR, "temp")
         shutil.rmtree(self.temp_dir)
         os.mkdir(self.temp_dir)
-
-    def __add_layer(self, position: int, bitmap: wx.Bitmap, destination: Rect, path: str = None):
-        """Updates the canvas and inspector with a new layer.
-
-        Parameters
-        ------------
-        position: int
-            the position of the new layer.
-        bitmap: wx.Bitmap
-            the image.
-        destination: Rect
-            the rendering location of the bitmap.
-        path: str
-            the path to the file of the bitmap.
-        """
-        # Update inspector
-        self.inspector.layers.InsertItem(position, f"layer_{self.counter}")
-        self.inspector.layers.SetItemData(position, self.counter)
-        self.inspector.layers.Select(position)
-
-        # Update canvas
-        self.canvas.paths[self.counter] = path
-        self.canvas.bitmaps[path] = bitmap
-        self.canvas.destinations[self.counter] = destination
-
-        self.counter += 1
-        self.__update_render_order()
 
     def __init_toolbar(self):
         """Initializes the toolbar.
@@ -147,12 +120,12 @@ class MainWindow(wx.Frame):
 
         self.toolbar.Realize()
 
-    def __on_add_layer(self, event: AddLayerEvent):
+    def __on_layer_add(self, event: LayerAddEvent):
         """Adds a layer from an image file.
 
         Parameters
         ------------
-        event: AddLayerEvent
+        event: LayerAddEvent
             the event is expected to have a `path` property.
         """
         layer_name = str(self.counter)
@@ -178,12 +151,12 @@ class MainWindow(wx.Frame):
         self.counter += 1
         self.__update_render_order()
 
-    def __on_duplicate_layer(self, event: DuplicateLayerEvent):
+    def __on_layer_duplicate(self, event: LayerDuplicateEvent):
         """Duplicates the currently selected layer.
 
         Parameters
         ------------
-        event: DuplicateLayerEvent
+        event: LayerDuplicateEvent
         """
         selected = self.inspector.layers.GetFirstSelected()
 
@@ -204,7 +177,7 @@ class MainWindow(wx.Frame):
         self.counter += 1
         self.__update_render_order()
 
-    def __on_remove_layer(self, event: RemoveLayerEvent):
+    def __on_layer_remove(self, event: LayerRemoveEvent):
         """Removes the currently selected layer.
 
         If there are no more references to the image layer, the image file is
@@ -212,7 +185,7 @@ class MainWindow(wx.Frame):
 
         Parameters
         ------------
-        event: RemoveLayerEvent
+        event: LayerRemoveEvent
         """
         selected = self.inspector.layers.GetFirstSelected()
         item_data = self.inspector.layers.GetItemData(selected)

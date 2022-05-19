@@ -15,9 +15,9 @@ ASSET_DIR = os.path.join(ROOT_DIR, "assets")
 ALL_EXPAND = wx.ALL | wx.EXPAND
 
 
-AddLayerEvent, EVT_ADD_LAYER = NewEvent()
-BackwardLayerEvent, EVT_BACKWARD_LAYER = NewEvent()
-DuplicateLayerEvent, EVT_DUPLICATE_LAYER = NewEvent()
-ForwardLayerEvent, EVT_FORWARD_LAYER = NewEvent()
-RemoveLayerEvent, EVT_REMOVE_LAYER = NewEvent()
+LayerAddEvent, EVT_LAYER_ADD = NewEvent()
+LayerBackwardEvent, EVT_LAYER_BACKWARD = NewEvent()
+LayerDuplicateEvent, EVT_LAYER_DUPLICATE = NewEvent()
+LayerForwardEvent, EVT_LAYER_FORWARD = NewEvent()
+LayerRemoveEvent, EVT_LAYER_REMOVE = NewEvent()
 UpdateCanvasEvent, EVT_UPDATE_CANVAS = NewEvent()

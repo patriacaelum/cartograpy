@@ -8,7 +8,7 @@ import os
 import wx
 
 from cartograpy import IMAGE_WILDCARD, ASSET_DIR, ALL_EXPAND
-from cartograpy import AddLayerEvent, BackwardLayerEvent, DuplicateLayerEvent, ForwardLayerEvent, RemoveLayerEvent
+from cartograpy import LayerAddEvent, LayerBackwardEvent, LayerDuplicateEvent, LayerForwardEvent, LayerRemoveEvent
 
 
 class LayerMenu(wx.Panel):
@@ -63,7 +63,7 @@ class LayerMenu(wx.Panel):
 
             path = dialog.GetPath()
 
-        wx.PostEvent(self.Parent, AddLayerEvent(path=path))
+        wx.PostEvent(self.Parent, LayerAddEvent(path=path))
 
     def __on_button_backward(self, event: wx.CommandEvent):
         """Moves the currently selected layer backward.
@@ -74,7 +74,7 @@ class LayerMenu(wx.Panel):
             contains information about command events, which originate from a
             variety of simple controls.
         """
-        wx.PostEvent(self.Parent, BackwardLayerEvent())
+        wx.PostEvent(self.Parent, LayerBackwardEvent())
 
     def __on_button_duplicate(self, event: wx.CommandEvent):
         """Duplicates the currently selected layer.
@@ -85,7 +85,7 @@ class LayerMenu(wx.Panel):
             contains information about command events, which originate from a
             variety of simple controls.
         """
-        wx.PostEvent(self.Parent, DuplicateLayerEvent())
+        wx.PostEvent(self.Parent, LayerDuplicateEvent())
 
     def __on_button_forward(self, event: wx.CommandEvent):
         """Moves the currently selected layer forward.
@@ -96,7 +96,7 @@ class LayerMenu(wx.Panel):
             contains information about command events, which originate from a
             variety of simple controls.
         """
-        wx.PostEvent(self.Parent, ForwardLayerEvent())
+        wx.PostEvent(self.Parent, LayerForwardEvent())
 
     def __on_button_remove(self, event: wx.CommandEvent):
         """Removes the currently selected layer.
@@ -107,7 +107,7 @@ class LayerMenu(wx.Panel):
             contains information about command events, which originate from a
             variety of simple controls.
         """
-        wx.PostEvent(self.Parent, RemoveLayerEvent())
+        wx.PostEvent(self.Parent, LayerRemoveEvent())
 
     def __init_buttons(self):
         """Initializes the buttons."""
