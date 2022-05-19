@@ -9,8 +9,18 @@ from dataclasses import dataclass
 import wx
 
 from cartograpy import ROOT_DIR, ASSET_DIR, ALL_EXPAND
-from cartograpy import EVT_LAYER_ADD, EVT_LAYER_DUPLICATE, EVT_LAYER_REMOVE, EVT_UPDATE_CANVAS
-from cartograpy import LayerAddEvent, LayerDuplicateEvent, LayerRemoveEvent, UpdateCanvasEvent
+from cartograpy import (
+    EVT_LAYER_ADD,
+    EVT_LAYER_DUPLICATE,
+    EVT_LAYER_REMOVE,
+    EVT_UPDATE_CANVAS,
+)
+from cartograpy import (
+    LayerAddEvent,
+    LayerDuplicateEvent,
+    LayerRemoveEvent,
+    UpdateCanvasEvent,
+)
 from cartograpy.canvas import Canvas
 from cartograpy.inspector import Inspector
 
@@ -95,7 +105,9 @@ class MainWindow(wx.Frame):
 
         """
         move_bitmap = wx.Bitmap(name=os.path.join(ASSET_DIR, "tool_move.png"))
-        colourpicker_bitmap = wx.Bitmap(name=os.path.join(ASSET_DIR, "tool_colourpicker.png"))
+        colourpicker_bitmap = wx.Bitmap(
+            name=os.path.join(ASSET_DIR, "tool_colourpicker.png")
+        )
 
         self.toolbar = self.CreateToolBar(
             style=wx.TB_VERTICAL,
@@ -141,6 +153,7 @@ class MainWindow(wx.Frame):
         # Update inspector
         self.inspector.layers.InsertItem(0, f"layer_{self.counter}")
         self.inspector.layers.SetItemData(0, self.counter)
+        self.inspector.layers.CheckItem(0)
         self.inspector.layers.Select(0)
 
         # Update canvas
@@ -168,6 +181,7 @@ class MainWindow(wx.Frame):
         # Update inspector
         self.inspector.layers.InsertItem(selected, f"layer_{self.counter}")
         self.inspector.layers.SetItemData(selected, self.counter)
+        self.inspector.layers.CheckItem(selected)
         self.inspector.layers.Select(selected)
 
         # Update canvas
@@ -237,8 +251,11 @@ class MainWindow(wx.Frame):
 
     def __update_render_order(self):
         """Updates the render order in the canvas from the inspector."""
-        n_layers = self.inspector.layers.GetItemCount()
-        render_order = [self.inspector.layers.GetItemData(i) for i in range(n_layers)]
-        self.canvas.render_order = list(reversed(render_order))
+        render_order = [
+            self.inspector.layers.GetItemData(i)
+            for i in range(self.inspector.layers.GetItemCount())
+            if self.inspector.layers.IsItemChecked(i)
+        ]
 
+        self.canvas.render_order = list(reversed(render_order))
         self.Refresh()

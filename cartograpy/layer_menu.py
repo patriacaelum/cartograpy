@@ -8,7 +8,13 @@ import os
 import wx
 
 from cartograpy import IMAGE_WILDCARD, ASSET_DIR, ALL_EXPAND
-from cartograpy import LayerAddEvent, LayerBackwardEvent, LayerDuplicateEvent, LayerForwardEvent, LayerRemoveEvent
+from cartograpy import (
+    LayerAddEvent,
+    LayerBackwardEvent,
+    LayerDuplicateEvent,
+    LayerForwardEvent,
+    LayerRemoveEvent,
+)
 
 
 class LayerMenu(wx.Panel):
@@ -35,11 +41,31 @@ class LayerMenu(wx.Panel):
         self.__init_buttons()
         self.__size_widgets()
 
-        self.Bind(wx.EVT_BUTTON, self.__on_button_add, id=self.button_add.GetId())
-        self.Bind(wx.EVT_BUTTON, self.__on_button_backward, id=self.button_backward.GetId())
-        self.Bind(wx.EVT_BUTTON, self.__on_button_duplicate, id=self.button_duplicate.GetId())
-        self.Bind(wx.EVT_BUTTON, self.__on_button_forward, id=self.button_forward.GetId())
-        self.Bind(wx.EVT_BUTTON, self.__on_button_remove, id=self.button_remove.GetId())
+        self.Bind(
+            event=wx.EVT_BUTTON,
+            handler=self.__on_button_add,
+            id=self.button_add.GetId(),
+        )
+        self.Bind(
+            event=wx.EVT_BUTTON,
+            handler=self.__on_button_backward,
+            id=self.button_backward.GetId(),
+        )
+        self.Bind(
+            event=wx.EVT_BUTTON,
+            handler=self.__on_button_duplicate,
+            id=self.button_duplicate.GetId(),
+        )
+        self.Bind(
+            event=wx.EVT_BUTTON,
+            handler=self.__on_button_forward,
+            id=self.button_forward.GetId(),
+        )
+        self.Bind(
+            event=wx.EVT_BUTTON,
+            handler=self.__on_button_remove,
+            id=self.button_remove.GetId(),
+        )
 
     def __on_button_add(self, event: wx.CommandEvent):
         """Adds an image file as a layer.
@@ -164,7 +190,9 @@ class LayerMenu(wx.Panel):
 
         add_bitmap = wx.Bitmap(name=os.path.join(ASSET_DIR, "button_add.png"))
         backward_bitmap = wx.Bitmap(name=os.path.join(ASSET_DIR, "button_backward.png"))
-        duplicate_bitmap = wx.Bitmap(name=os.path.join(ASSET_DIR, "button_duplicate.png"))
+        duplicate_bitmap = wx.Bitmap(
+            name=os.path.join(ASSET_DIR, "button_duplicate.png")
+        )
         forward_bitmap = wx.Bitmap(name=os.path.join(ASSET_DIR, "button_forward.png"))
         remove_bitmap = wx.Bitmap(name=os.path.join(ASSET_DIR, "button_remove.png"))
 

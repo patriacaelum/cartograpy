@@ -4,8 +4,22 @@
 import wx
 
 from cartograpy import ALL_EXPAND
-from cartograpy import EVT_LAYER_ADD, EVT_LAYER_BACKWARD, EVT_LAYER_DUPLICATE, EVT_LAYER_FORWARD, EVT_LAYER_REMOVE, EVT_UPDATE_CANVAS
-from cartograpy import LayerAddEvent, LayerBackwardEvent, LayerDuplicateEvent, LayerForwardEvent, LayerRemoveEvent, UpdateCanvasEvent
+from cartograpy import (
+    EVT_LAYER_ADD,
+    EVT_LAYER_BACKWARD,
+    EVT_LAYER_DUPLICATE,
+    EVT_LAYER_FORWARD,
+    EVT_LAYER_REMOVE,
+    EVT_UPDATE_CANVAS,
+)
+from cartograpy import (
+    LayerAddEvent,
+    LayerBackwardEvent,
+    LayerDuplicateEvent,
+    LayerForwardEvent,
+    LayerRemoveEvent,
+    UpdateCanvasEvent,
+)
 from cartograpy.layer_menu import LayerMenu
 
 
@@ -46,6 +60,8 @@ class Inspector(wx.Panel):
         self.__size_widgets()
 
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.__on_list_item_activated)
+        self.Bind(wx.EVT_LIST_ITEM_CHECKED, self.__on_list_item_checked)
+        self.Bind(wx.EVT_LIST_ITEM_UNCHECKED, self.__on_list_item_checked)
 
         self.Bind(EVT_LAYER_ADD, self.__on_layer_add)
         self.Bind(EVT_LAYER_BACKWARD, self.__on_layer_backward)
@@ -60,7 +76,11 @@ class Inspector(wx.Panel):
             id=wx.ID_ANY,
             pos=wx.DefaultPosition,
             size=wx.DefaultSize,
-            style=wx.LC_REPORT | wx.LC_ALIGN_LEFT | wx.LC_NO_HEADER | wx.LC_SINGLE_SEL | wx.LC_HRULES,
+            style=wx.LC_REPORT
+            | wx.LC_ALIGN_LEFT
+            | wx.LC_NO_HEADER
+            | wx.LC_SINGLE_SEL
+            | wx.LC_HRULES,
             validator=wx.DefaultValidator,
             name="Layers",
         )
@@ -148,6 +168,15 @@ class Inspector(wx.Panel):
         """
         index = event.GetIndex()
         self.layers.EditLabel(index)
+
+    def __on_list_item_checked(self, event: wx.ListEvent):
+        """Changes the visibility of the checked layer.
+
+        Parameters
+        ------------
+        event: wx.ListEvent
+        """
+        wx.PostEvent(self.Parent, UpdateCanvasEvent())
 
     def __size_widgets(self):
         """Generates the layout for the inspector panel."""
