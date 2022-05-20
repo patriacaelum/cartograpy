@@ -1,34 +1,37 @@
-"""The canvas is where the layers are rendered and moved around."""
+"""The minimap shows where viewpoint of the camera in relation to all of the
+images.
+"""
 
 
 import wx
 
 
-class Canvas(wx.Panel):
-    """The canvas is where the layers are rendered and moved around.
+class Minimap(wx.Panel):
+    """The minimap shows the viewpoint of the camera in relation to all of
+    the images.
 
-    The canvas consists of these major elements:
+    The minimap consists of these major elements:
 
     - The background colour.
     - The imported layers.
+    - The viewpoint of the canvas.
 
     The internal parameters are:
 
     - `render_order` is a list of layer data indicating the order to render the
       layers.
-    - `paths` maps layer data to the path of the image.
+    - `path` maps layer data to the path of the image.
     - `bitmaps` maps the path of the image to a `wx.Bitmap` object.
-    - `destinations` maps layer data to a `Rect` defining where on the canvas
+    - `destinations` maps layer data to a `Rect` defining where on the minimap
       the corresponding bitmap will be rendered.
 
     Parameters
     ------------
     parent: wx.Frame
-        The parent window of the application.
+        The parent window of this component.
     """
-
     def __init__(self, parent: wx.Frame):
-        super().__init__(parent=parent)
+        super().__init__(parent=parent, size=wx.Size(400, 400))
 
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
 
@@ -40,7 +43,7 @@ class Canvas(wx.Panel):
         self.Bind(wx.EVT_PAINT, self.__on_paint)
 
     def __on_paint(self, event: wx.PaintEvent):
-        """Repaints the canvas.
+        """Repaints the minimap.
 
         Parameters
         ------------
