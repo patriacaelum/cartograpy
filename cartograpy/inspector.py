@@ -21,6 +21,7 @@ from cartograpy import (
     UpdateCanvasEvent,
 )
 from cartograpy.layer_menu import LayerMenu
+from cartograpy.minimap import Minimap
 
 
 class Inspector(wx.Panel):
@@ -55,6 +56,7 @@ class Inspector(wx.Panel):
 
         self.SetMaxSize(wx.Size(400, -1))
 
+        self.minimap = Minimap(parent=self)
         self.layer_menu = LayerMenu(parent=self)
         self.__init_layers()
         self.__size_widgets()
@@ -182,6 +184,7 @@ class Inspector(wx.Panel):
         """Generates the layout for the inspector panel."""
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
 
+        sizer.Add(window=self.minimap, flag=ALL_EXPAND)
         sizer.Add(window=self.layers, flag=ALL_EXPAND)
         sizer.Add(window=self.layer_menu, flag=ALL_EXPAND)
 

@@ -4,41 +4,25 @@
 import os
 import shutil
 
-from dataclasses import dataclass
-
+import numpy as np
 import wx
 
-from cartograpy import ROOT_DIR, ASSET_DIR, ALL_EXPAND
 from cartograpy import (
+    ROOT_DIR, 
+    ASSET_DIR, 
+    ALL_EXPAND,
     EVT_LAYER_ADD,
     EVT_LAYER_DUPLICATE,
     EVT_LAYER_REMOVE,
     EVT_UPDATE_CANVAS,
-)
-from cartograpy import (
     LayerAddEvent,
     LayerDuplicateEvent,
     LayerRemoveEvent,
     UpdateCanvasEvent,
+    Rect
 )
 from cartograpy.canvas import Canvas
 from cartograpy.inspector import Inspector
-
-
-@dataclass
-class Rect:
-    x: int = 0
-    y: int = 0
-    w: int = 0
-    h: int = 0
-
-    def to_dict(self):
-        return {
-            "x": self.x,
-            "y": self.y,
-            "w": self.w,
-            "h": self.h,
-        }
 
 
 class MainWindow(wx.Frame):
@@ -161,6 +145,10 @@ class MainWindow(wx.Frame):
         self.canvas.bitmaps[temp_file] = bitmap
         self.canvas.destinations[self.counter] = destination
 
+        # Update minimap
+        self.inspector.minimap.paths[self.counter] = temp_file
+        self.__update_minimap()
+
         self.counter += 1
         self.__update_render_order()
 
@@ -187,6 +175,10 @@ class MainWindow(wx.Frame):
         # Update canvas
         self.canvas.paths[self.counter] = path
         self.canvas.destinations[self.counter] = destination
+
+        # Update minimap
+        self.inspector.minimap.paths[self.counter] = path
+        self.__update_minimap()
 
         self.counter += 1
         self.__update_render_order()
@@ -249,13 +241,60 @@ class MainWindow(wx.Frame):
         self.SetSizer(sizer)
         self.Layout()
 
+    def __update_minimap(self):
+        """Updates the minimap from the canvas."""
+        n_layers = len(self.canvas.destinations)
+        x = np.zeros(n_layers)
+        y = np.zeros(n_layers)
+        w = np.zeros(n_layers)
+        h = np.zeros(n_layers)
+
+        for n, destination in enumerate(self.canvas.destinations.values()):
+            x[n] = destination.x
+            y[n] = destination.y
+            w[n] = destination.w
+            h[n] = destination.h
+
+        x_min = np.min(x)
+        y_min = np.min(y)
+        w_max = np.max(w) - x_min
+        h_max = np.max(h) - y_min
+
+        w_new, h_new = self.inspector.minimap.GetSize().Get()
+
+        w_factor = w_new / w_max
+        h_factor = h_new / h_max
+        factor = min(w_factor, h_factor)
+
+        for path, bitmap in self.canvas.bitmaps.items():
+            image = bitmap.ConvertToImage().Scale(
+                width=int(bitmap.GetWidth() * factor), 
+                height=int(bitmap.GetHeight() * factor),
+            )
+
+            self.inspector.minimap.bitmaps[path] = image.ConvertToBitmap()
+
+        for key, destination in self.canvas.destinations.items():
+            self.inspector.minimap.destinations[key] = Rect(
+                x=destination.x * factor,
+                y=destination.y * factor,
+                w=destination.w * factor,
+                h=destination.h * factor,
+            )
+
     def __update_render_order(self):
-        """Updates the render order in the canvas from the inspector."""
+        """Updates the render order in the canvas and minimap from the
+        inspector.
+        """
         render_order = [
             self.inspector.layers.GetItemData(i)
             for i in range(self.inspector.layers.GetItemCount())
             if self.inspector.layers.IsItemChecked(i)
         ]
 
-        self.canvas.render_order = list(reversed(render_order))
+        render_order = list(reversed(render_order))
+
+        self.canvas.render_order = render_order
+        self.inspector.minimap.render_order = render_order
+
         self.Refresh()
