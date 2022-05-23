@@ -1,4 +1,14 @@
-"""The main window that houses the application."""
+"""The main window that houses the application.
+
+Optimizations that can be done:
+
+- Store rectangles as numpy arrays instead of individual objects
+- When the layer operations are performed, instead of rebuilding everything
+  from scratch, switch the two columns in the array or extend the array
+- Only recreate the minimap images when the scaling factor from canvas to
+  minimap is changed
+
+"""
 
 
 import os
@@ -15,10 +25,12 @@ from cartograpy import (
     EVT_LAYER_DUPLICATE,
     EVT_LAYER_REMOVE,
     EVT_UPDATE_CANVAS,
+    EVT_UPDATE_LAYER,
     LayerAddEvent,
     LayerDuplicateEvent,
     LayerRemoveEvent,
     UpdateCanvasEvent,
+    UpdateLayerEvent,
     Rect
 )
 from cartograpy.canvas import Canvas
@@ -63,10 +75,13 @@ class MainWindow(wx.Frame):
         self.__init_toolbar()
         self.__size_widgets()
 
+        self.Bind(wx.EVT_TOOL, self.__on_tool_colourpicker, id=self.tool_colourpicker.GetId())
+
         self.Bind(EVT_LAYER_ADD, self.__on_layer_add)
         self.Bind(EVT_LAYER_DUPLICATE, self.__on_layer_duplicate)
         self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
         self.Bind(EVT_UPDATE_CANVAS, self.__on_update_canvas)
+        self.Bind(EVT_UPDATE_LAYER, self.__on_update_layer)
 
         self.counter = 0
         self.images = dict()
@@ -88,7 +103,6 @@ class MainWindow(wx.Frame):
         - Colourpicker
 
         """
-        move_bitmap = wx.Bitmap(name=os.path.join(ASSET_DIR, "tool_move.png"))
         colourpicker_bitmap = wx.Bitmap(
             name=os.path.join(ASSET_DIR, "tool_colourpicker.png")
         )
@@ -97,15 +111,6 @@ class MainWindow(wx.Frame):
             style=wx.TB_VERTICAL,
             id=wx.ID_ANY,
         )
-
-        self.tool_move = self.toolbar.AddTool(
-            toolId=wx.ID_ANY,
-            label="Move",
-            bitmap=move_bitmap,
-            kind=wx.ITEM_CHECK,
-        )
-
-        self.toolbar.AddSeparator()
 
         self.tool_colourpicker = self.toolbar.AddTool(
             toolId=wx.ID_ANY,
@@ -212,6 +217,21 @@ class MainWindow(wx.Frame):
 
         self.__update_render_order()
 
+    def __on_tool_colourpicker(self, event: wx.CommandEvent):
+        """Opens the colour dialog and sets the draw colour.
+
+        Parameters
+        ------------
+        event: wx.CommandEvent
+            Contains information about command events from controls.
+        """
+        with wx.ColourDialog(parent=self) as dialog:
+            if dialog.ShowModal() == wx.ID_CANCEL:
+                return
+
+            colour = dialog.GetColourData().GetColour()
+        self.Refresh()
+
     def __on_update_canvas(self, event: UpdateCanvasEvent):
         """Updates the canvas.
 
@@ -241,6 +261,22 @@ class MainWindow(wx.Frame):
         self.SetSizer(sizer)
         self.Layout()
 
+    def __on_update_layer(self, event: UpdateLayerEvent):
+        """Updates the currently selected layer in the inspector.
+
+        Parameters
+        ------------
+        event: UpdateLayerEvent
+            the event is expected to have `dx` and `dy` properties.
+        """
+        selected = self.inspector.layers.GetFirstSelected()
+        key = self.inspector.layers.GetItemData(selected)
+
+        self.canvas.destinations[key].move(dx=event.dx, dy=event.dy)
+        self.__update_minimap()
+
+        self.Refresh()
+
     def __update_minimap(self):
         """Updates the minimap from the canvas."""
         n_layers = len(self.canvas.destinations)
@@ -252,8 +288,8 @@ class MainWindow(wx.Frame):
         for n, destination in enumerate(self.canvas.destinations.values()):
             x[n] = destination.x
             y[n] = destination.y
-            w[n] = destination.w
-            h[n] = destination.h
+            w[n] = destination.x + destination.w
+            h[n] = destination.y + destination.h
 
         x_min = np.min(x)
         y_min = np.min(y)
@@ -276,8 +312,8 @@ class MainWindow(wx.Frame):
 
         for key, destination in self.canvas.destinations.items():
             self.inspector.minimap.destinations[key] = Rect(
-                x=destination.x * factor,
-                y=destination.y * factor,
+                x=(destination.x - x_min) * factor,
+                y=(destination.y - y_min) * factor,
                 w=destination.w * factor,
                 h=destination.h * factor,
             )
