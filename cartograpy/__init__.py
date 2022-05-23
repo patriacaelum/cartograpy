@@ -22,6 +22,7 @@ LayerDuplicateEvent, EVT_LAYER_DUPLICATE = NewEvent()
 LayerForwardEvent, EVT_LAYER_FORWARD = NewEvent()
 LayerRemoveEvent, EVT_LAYER_REMOVE = NewEvent()
 UpdateCanvasEvent, EVT_UPDATE_CANVAS = NewEvent()
+UpdateLayerEvent, EVT_UPDATE_LAYER = NewEvent()
 
 
 @dataclasses.dataclass
@@ -30,6 +31,10 @@ class Rect:
     y: int = 0
     w: int = 0
     h: int = 0
+
+    def move(self, dx: int = 0, dy: int = 0):
+        self.x += dx
+        self.y += dy
 
     def set(self, x: int = None, y: int = None, w: int = None, h: int = None):
         if x is not None:
