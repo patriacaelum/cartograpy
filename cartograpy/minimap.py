@@ -5,6 +5,8 @@ images.
 
 import wx
 
+from cartograpy import Rects
+
 
 class Minimap(wx.Panel):
     """The minimap shows the viewpoint of the camera in relation to all of
@@ -35,10 +37,13 @@ class Minimap(wx.Panel):
 
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
 
-        self.render_order = list()
+        self.scale_factor = 1
+
+        self.order = list()
+        self.visibility = list()
         self.paths = dict()
         self.bitmaps = dict()
-        self.destinations = dict()
+        self.destinations = Rects()
 
         self.Bind(wx.EVT_PAINT, self.__on_paint)
 
@@ -54,8 +59,11 @@ class Minimap(wx.Panel):
         dc = wx.AutoBufferedPaintDC(self)
         gc = wx.GraphicsContext.Create(dc)
 
-        for key in self.render_order:
+        for n, key in enumerate(self.order):
+            if not self.visibility[n]:
+                continue
+
             gc.DrawBitmap(
                 bmp=self.bitmaps[self.paths[key]],
-                **self.destinations[key].to_dict(),
+                **self.destinations[n].to_dict(),
             )
