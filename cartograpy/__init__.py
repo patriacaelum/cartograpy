@@ -23,6 +23,7 @@ LayerDuplicateEvent, EVT_LAYER_DUPLICATE = NewEvent()
 LayerForwardEvent, EVT_LAYER_FORWARD = NewEvent()
 LayerRemoveEvent, EVT_LAYER_REMOVE = NewEvent()
 SwapLayerEvent, EVT_SWAP_LAYER = NewEvent()
+UpdateCameraEvent, EVT_UPDATE_CAMERA = NewEvent()
 UpdateLayerEvent, EVT_UPDATE_LAYER = NewEvent()
 UpdateVisibilityEvent, EVT_UPDATE_VISIBILITY = NewEvent()
 

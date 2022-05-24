@@ -5,7 +5,7 @@ images.
 
 import wx
 
-from cartograpy import Rects
+from cartograpy import Rect, Rects
 
 
 class Minimap(wx.Panel):
@@ -45,6 +45,9 @@ class Minimap(wx.Panel):
         self.bitmaps = dict()
         self.destinations = Rects()
 
+        self.camera = Rect(w=400, h=400)
+        self.camera_view = wx.Bitmap.FromRGBA(400, 400, 255, 255, 255, 128)
+
         self.Bind(wx.EVT_PAINT, self.__on_paint)
 
     def __on_paint(self, event: wx.PaintEvent):
@@ -67,3 +70,8 @@ class Minimap(wx.Panel):
                 bmp=self.bitmaps[self.paths[key]],
                 **self.destinations[n].to_dict(),
             )
+
+        gc.DrawBitmap(
+            bmp=self.camera_view,
+            **self.camera.to_dict(),
+        )

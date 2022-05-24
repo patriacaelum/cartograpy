@@ -3,7 +3,7 @@
 
 import wx
 
-from cartograpy import UpdateLayerEvent
+from cartograpy import UpdateCameraEvent, UpdateLayerEvent
 from cartograpy import Rects
 
 
@@ -101,6 +101,7 @@ class Canvas(wx.Panel):
             for i in range(len(self.destinations)):
                 self.destinations.move(index=i, dx=dx, dy=dy)
 
+            wx.PostEvent(self.Parent, UpdateCameraEvent())
             self.Refresh()
 
     def __on_paint(self, event: wx.PaintEvent):
