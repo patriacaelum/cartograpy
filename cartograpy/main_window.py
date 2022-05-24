@@ -80,7 +80,6 @@ class MainWindow(wx.Frame):
         self.Bind(EVT_LAYER_ADD, self.__on_layer_add)
         self.Bind(EVT_LAYER_DUPLICATE, self.__on_layer_duplicate)
         self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
-        self.Bind(EVT_UPDATE_CANVAS, self.__on_update_canvas)
         self.Bind(EVT_UPDATE_LAYER, self.__on_update_layer)
 
         self.counter = 0
@@ -145,17 +144,20 @@ class MainWindow(wx.Frame):
         self.inspector.layers.CheckItem(0)
         self.inspector.layers.Select(0)
 
+        # Update minimap
+        self.inspector.minimap.order.append(self.counter)
+        self.inspector.minimap.paths[self.counter] = temp_file
+        self.inspector.minimap.destinations.append(rect=destination)
+
         # Update canvas
+        self.canvas.order.append(self.counter)
         self.canvas.paths[self.counter] = temp_file
         self.canvas.bitmaps[temp_file] = bitmap
-        self.canvas.destinations[self.counter] = destination
-
-        # Update minimap
-        self.inspector.minimap.paths[self.counter] = temp_file
-        self.__update_minimap()
+        self.canvas.destinations.append(rect=destination)
 
         self.counter += 1
-        self.__update_render_order()
+        self.__update_minimap(resize=True)
+        self.Refresh()
 
     def __on_layer_duplicate(self, event: LayerDuplicateEvent):
         """Duplicates the currently selected layer.
@@ -170,6 +172,7 @@ class MainWindow(wx.Frame):
         selected_data = self.inspector.layers.GetItemData(selected)
         path = self.canvas.paths[selected_data]
         destination = self.canvas.destinations[selected_data]
+        index = -(selected + 1)
 
         # Update inspector
         self.inspector.layers.InsertItem(selected, f"layer_{self.counter}")
@@ -177,16 +180,19 @@ class MainWindow(wx.Frame):
         self.inspector.layers.CheckItem(selected)
         self.inspector.layers.Select(selected)
 
-        # Update canvas
-        self.canvas.paths[self.counter] = path
-        self.canvas.destinations[self.counter] = destination
-
         # Update minimap
+        self.inspector.minimap.order.insert(index, self.counter)
         self.inspector.minimap.paths[self.counter] = path
-        self.__update_minimap()
+        self.inspector.minimap.destinations.insert(index=index, rect=destination)
+
+        # Update canvas
+        self.canvas.order.insert(index, self.counter)
+        self.canvas.paths[self.counter] = path
+        self.canvas.destinations.insert(index=index, rect=destination)
 
         self.counter += 1
-        self.__update_render_order()
+        self.__update_minimap(resize=True)
+        self.Refresh()
 
     def __on_layer_remove(self, event: LayerRemoveEvent):
         """Removes the currently selected layer.
@@ -200,22 +206,31 @@ class MainWindow(wx.Frame):
         """
         selected = self.inspector.layers.GetFirstSelected()
         item_data = self.inspector.layers.GetItemData(selected)
+        index = -(selected + 1)
 
         # Update inspector
         self.inspector.layers.DeleteItem(selected)
         self.inspector.layers.Select(selected)
 
+        # Update minimap
+        del self.inspector.minimap.order[index]
+        del self.inspector.minimap.paths[item_data]
+        self.inspector.minimap.delete(index)
+
         # Update canvas
+        del self.canvas.order[index]
+        del self.canvas.paths[item_data]
+        self.canvas.destinations.delete(index)
+
         path = self.canvas.paths[item_data]
 
-        del self.canvas.paths[item_data]
-        del self.canvas.destinations[item_data]
-
         if path not in self.canvas.paths.values():
+            del self.inspector.minimap.bitmaps[path]
             del self.canvas.bitmaps[path]
             os.remove(path)
 
-        self.__update_render_order()
+        self.__update_minimap(resize=True)
+        self.Refresh()
 
     def __on_tool_colourpicker(self, event: wx.CommandEvent):
         """Opens the colour dialog and sets the draw colour.
@@ -231,15 +246,6 @@ class MainWindow(wx.Frame):
 
             colour = dialog.GetColourData().GetColour()
         self.Refresh()
-
-    def __on_update_canvas(self, event: UpdateCanvasEvent):
-        """Updates the canvas.
-
-        Parameters
-        ------------
-        event: UpdateCanvasEvent
-        """
-        self.__update_render_order()
 
     def __size_widgets(self):
         """Generates the layout for the canvas and inspector."""
@@ -270,37 +276,40 @@ class MainWindow(wx.Frame):
             the event is expected to have `dx` and `dy` properties.
         """
         selected = self.inspector.layers.GetFirstSelected()
-        key = self.inspector.layers.GetItemData(selected)
+        index = -(selected + 1)
 
-        self.canvas.destinations[key].move(dx=event.dx, dy=event.dy)
+        self.canvas.destinations.move(index=index, dx=event.dx, dy=event.dy)
         self.__update_minimap()
 
         self.Refresh()
 
-    def __update_minimap(self):
+    def __update_minimap(self, resize: bool = False):
         """Updates the minimap from the canvas."""
-        n_layers = len(self.canvas.destinations)
-        x = np.zeros(n_layers)
-        y = np.zeros(n_layers)
-        w = np.zeros(n_layers)
-        h = np.zeros(n_layers)
-
-        for n, destination in enumerate(self.canvas.destinations.values()):
-            x[n] = destination.x
-            y[n] = destination.y
-            w[n] = destination.x + destination.w
-            h[n] = destination.y + destination.h
-
-        x_min = np.min(x)
-        y_min = np.min(y)
-        w_max = np.max(w) - x_min
-        h_max = np.max(h) - y_min
+        x_min = self.canvas.destinations.x.min()
+        y_min = self.canvas.destinations.y.min()
+        w_max = (self.canvas.destinations.x + self.canvas.destinations.w).max() - x_min
+        h_max = (self.canvas.destinations.y + self.canvas.destinations.h).max() - y_min
 
         w_new, h_new = self.inspector.minimap.GetSize().Get()
 
         w_factor = w_new / w_max
         h_factor = h_new / h_max
         factor = min(w_factor, h_factor)
+
+        # Update destinations
+        n_layers = len(self.canvas.destinations)
+
+        self.inspector.minimap.destinations.rects[0] = (self.canvas.destinations.x - np.ones(n_layers) * x_min) * factor
+        self.inspector.minimap.destinations.rects[1] = (self.canvas.destinations.y - np.ones(n_layers) * y_min) * factor
+        self.inspector.minimap.destinations.rects[2] = self.canvas.destinations.w * factor
+        self.inspector.minimap.destinations.rects[3] = self.canvas.destinations.h * factor
+
+        # Avoid resizing when possible
+        if not resize or self.inspector.minimap.scale_factor == factor:
+            return
+
+        # Update resized bitmaps
+        self.inspector.minimap.scale_factor = factor
 
         for path, bitmap in self.canvas.bitmaps.items():
             image = bitmap.ConvertToImage().Scale(
@@ -309,28 +318,3 @@ class MainWindow(wx.Frame):
             )
 
             self.inspector.minimap.bitmaps[path] = image.ConvertToBitmap()
-
-        for key, destination in self.canvas.destinations.items():
-            self.inspector.minimap.destinations[key] = Rect(
-                x=(destination.x - x_min) * factor,
-                y=(destination.y - y_min) * factor,
-                w=destination.w * factor,
-                h=destination.h * factor,
-            )
-
-    def __update_render_order(self):
-        """Updates the render order in the canvas and minimap from the
-        inspector.
-        """
-        render_order = [
-            self.inspector.layers.GetItemData(i)
-            for i in range(self.inspector.layers.GetItemCount())
-            if self.inspector.layers.IsItemChecked(i)
-        ]
-
-        render_order = list(reversed(render_order))
-
-        self.canvas.render_order = render_order
-        self.inspector.minimap.render_order = render_order
-
-        self.Refresh()

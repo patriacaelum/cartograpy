@@ -4,6 +4,7 @@
 import wx
 
 from cartograpy import UpdateLayerEvent
+from cartograpy import Rects
 
 
 class Canvas(wx.Panel):
@@ -34,10 +35,10 @@ class Canvas(wx.Panel):
 
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
 
-        self.render_order = list()
+        self.order = list()
         self.paths = dict()
         self.bitmaps = dict()
-        self.destinations = dict()
+        self.destinations = Rects()
 
         self.x_mouse = None
         self.y_mouse = None
@@ -96,8 +97,8 @@ class Canvas(wx.Panel):
             self.x_mouse = x
             self.y_mouse = y
 
-            for destination in self.destinations.values():
-                destination.move(dx=dx, dy=dy)
+            for i in range(len(self.destinations)):
+                self.destinations.move(index=i, dx=dx, dy=dy)
 
             self.Refresh()
 
@@ -113,8 +114,8 @@ class Canvas(wx.Panel):
         dc = wx.AutoBufferedPaintDC(self)
         gc = wx.GraphicsContext.Create(dc)
 
-        for key in self.render_order:
+        for n, key in enumerate(self.order):
             gc.DrawBitmap(
                 bmp=self.bitmaps[self.paths[key]],
-                **self.destinations[key].to_dict(),
+                **self.destinations[n].to_dict(),
             )
