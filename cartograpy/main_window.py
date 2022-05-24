@@ -25,12 +25,14 @@ from cartograpy import (
     EVT_LAYER_DUPLICATE,
     EVT_LAYER_REMOVE,
     EVT_SWAP_LAYER,
+    EVT_UPDATE_CAMERA,
     EVT_UPDATE_LAYER,
     EVT_UPDATE_VISIBILITY,
     LayerAddEvent,
     LayerDuplicateEvent,
     LayerRemoveEvent,
     SwapLayerEvent,
+    UpdateCameraEvent,
     UpdateLayerEvent,
     UpdateVisibilityEvent,
     Rect
@@ -83,6 +85,7 @@ class MainWindow(wx.Frame):
         self.Bind(EVT_LAYER_DUPLICATE, self.__on_layer_duplicate)
         self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
         self.Bind(EVT_SWAP_LAYER, self.__on_swap_layer)
+        self.Bind(EVT_UPDATE_CAMERA, self.__on_update_camera)
         self.Bind(EVT_UPDATE_LAYER, self.__on_update_layer)
         self.Bind(EVT_UPDATE_VISIBILITY, self.__on_update_visibility)
 
@@ -280,6 +283,16 @@ class MainWindow(wx.Frame):
 
         self.Refresh()
 
+    def __on_update_camera(self, event: UpdateCameraEvent):
+        """Updates the camera view in the minimap.
+
+        Parameters
+        ------------
+        event: UpdateCameraEvent
+        """
+        self.__update_minimap()
+        self.Refresh()
+
     def __on_update_layer(self, event: UpdateLayerEvent):
         """Updates the currently selected layer in the inspector.
 
@@ -339,10 +352,11 @@ class MainWindow(wx.Frame):
         w_max = (self.canvas.destinations.x + self.canvas.destinations.w).max() - x_min
         h_max = (self.canvas.destinations.y + self.canvas.destinations.h).max() - y_min
 
-        w_new, h_new = self.inspector.minimap.GetSize().Get()
+        w_minimap, h_minimap = self.inspector.minimap.GetSize().Get()
+        w_canvas, h_canvas = self.canvas.GetSize().Get()
 
-        w_factor = w_new / w_max
-        h_factor = h_new / h_max
+        w_factor = w_minimap / w_max
+        h_factor = h_minimap / h_max
         factor = min(w_factor, h_factor)
 
         # Update destinations
@@ -352,6 +366,11 @@ class MainWindow(wx.Frame):
         self.inspector.minimap.destinations.rects[1] = (self.canvas.destinations.y - np.full(n_layers, y_min)) * factor
         self.inspector.minimap.destinations.rects[2] = self.canvas.destinations.w * factor
         self.inspector.minimap.destinations.rects[3] = self.canvas.destinations.h * factor
+
+        self.inspector.minimap.camera.x = int(-x_min * factor)
+        self.inspector.minimap.camera.y = int(-y_min * factor)
+        self.inspector.minimap.camera.w = int(w_canvas * factor)
+        self.inspector.minimap.camera.h = int(h_canvas * factor)
 
         # Avoid resizing when possible
         if not resize or self.inspector.minimap.scale_factor == factor:
