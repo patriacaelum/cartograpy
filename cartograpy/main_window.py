@@ -24,12 +24,12 @@ from cartograpy import (
     EVT_LAYER_ADD,
     EVT_LAYER_DUPLICATE,
     EVT_LAYER_REMOVE,
-    EVT_UPDATE_CANVAS,
+    EVT_SWAP_LAYER,
     EVT_UPDATE_LAYER,
     LayerAddEvent,
     LayerDuplicateEvent,
     LayerRemoveEvent,
-    UpdateCanvasEvent,
+    SwapLayerEvent,
     UpdateLayerEvent,
     Rect
 )
@@ -80,6 +80,7 @@ class MainWindow(wx.Frame):
         self.Bind(EVT_LAYER_ADD, self.__on_layer_add)
         self.Bind(EVT_LAYER_DUPLICATE, self.__on_layer_duplicate)
         self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
+        self.Bind(EVT_SWAP_LAYER, self.__on_swap_layer)
         self.Bind(EVT_UPDATE_LAYER, self.__on_update_layer)
 
         self.counter = 0
@@ -247,6 +248,43 @@ class MainWindow(wx.Frame):
             colour = dialog.GetColourData().GetColour()
         self.Refresh()
 
+    def __on_swap_layer(self, event: SwapLayerEvent):
+        """Swaps the order of two layers in the canvas and minimap.
+
+        Parameters
+        ------------
+        event: SwapLayerEvent
+            the event is expected to have a tuple of size two as the `layers`
+            property.
+        """
+        i, j = event.layers
+        i = -(i + 1)
+        j = -(j + 1)
+
+        self.canvas.order[i], self.canvas.order[j] = self.canvas.order[j], self.canvas.order[i]
+        self.canvas.destinations.rects[:,[i,j]] = self.canvas.destinations.rects[:,[j,i]]
+
+        self.inspector.minimap.order[i], self.inspector.minimap.order[j] = self.inspector.minimap.order[j], self.inspector.minimap.order[i]
+        self.inspector.minimap.destinations.rects[:,[i,j]] = self.inspector.minimap.destinations.rects[:,[j,i]]
+
+        self.Refresh()
+
+    def __on_update_layer(self, event: UpdateLayerEvent):
+        """Updates the currently selected layer in the inspector.
+
+        Parameters
+        ------------
+        event: UpdateLayerEvent
+            the event is expected to have `dx` and `dy` properties.
+        """
+        selected = self.inspector.layers.GetFirstSelected()
+        index = -(selected + 1)
+
+        self.canvas.destinations.move(index=index, dx=event.dx, dy=event.dy)
+        self.__update_minimap()
+
+        self.Refresh()
+
     def __size_widgets(self):
         """Generates the layout for the canvas and inspector."""
         sizer = wx.BoxSizer(orient=wx.HORIZONTAL)
@@ -267,22 +305,6 @@ class MainWindow(wx.Frame):
         self.SetSizer(sizer)
         self.Layout()
 
-    def __on_update_layer(self, event: UpdateLayerEvent):
-        """Updates the currently selected layer in the inspector.
-
-        Parameters
-        ------------
-        event: UpdateLayerEvent
-            the event is expected to have `dx` and `dy` properties.
-        """
-        selected = self.inspector.layers.GetFirstSelected()
-        index = -(selected + 1)
-
-        self.canvas.destinations.move(index=index, dx=event.dx, dy=event.dy)
-        self.__update_minimap()
-
-        self.Refresh()
-
     def __update_minimap(self, resize: bool = False):
         """Updates the minimap from the canvas."""
         x_min = self.canvas.destinations.x.min()
@@ -299,8 +321,8 @@ class MainWindow(wx.Frame):
         # Update destinations
         n_layers = len(self.canvas.destinations)
 
-        self.inspector.minimap.destinations.rects[0] = (self.canvas.destinations.x - np.ones(n_layers) * x_min) * factor
-        self.inspector.minimap.destinations.rects[1] = (self.canvas.destinations.y - np.ones(n_layers) * y_min) * factor
+        self.inspector.minimap.destinations.rects[0] = (self.canvas.destinations.x - np.full(n_layers, x_min)) * factor
+        self.inspector.minimap.destinations.rects[1] = (self.canvas.destinations.y - np.full(n_layers, y_min)) * factor
         self.inspector.minimap.destinations.rects[2] = self.canvas.destinations.w * factor
         self.inspector.minimap.destinations.rects[3] = self.canvas.destinations.h * factor
 

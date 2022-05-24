@@ -3,22 +3,20 @@
 
 import wx
 
-from cartograpy import ALL_EXPAND
 from cartograpy import (
+    ALL_EXPAND,
     EVT_LAYER_ADD,
     EVT_LAYER_BACKWARD,
     EVT_LAYER_DUPLICATE,
     EVT_LAYER_FORWARD,
     EVT_LAYER_REMOVE,
-    EVT_UPDATE_CANVAS,
-)
-from cartograpy import (
+    EVT_SWAP_LAYER,
     LayerAddEvent,
     LayerBackwardEvent,
     LayerDuplicateEvent,
     LayerForwardEvent,
     LayerRemoveEvent,
-    UpdateCanvasEvent,
+    SwapLayerEvent,
 )
 from cartograpy.layer_menu import LayerMenu
 from cartograpy.minimap import Minimap
@@ -118,9 +116,10 @@ class Inspector(wx.Panel):
 
             self.layers.DeleteItem(selected)
             self.layers.InsertItem(item)
+            self.layers.CheckItem(new_index)
             self.layers.Select(new_index)
 
-            wx.PostEvent(self.Parent, UpdateCanvasEvent())
+            wx.PostEvent(self.Parent, SwapLayerEvent(layers=(selected, new_index)))
 
     def __on_layer_duplicate(self, event: LayerDuplicateEvent):
         """Duplicates the currently selected layer.
@@ -148,9 +147,10 @@ class Inspector(wx.Panel):
 
             self.layers.DeleteItem(selected)
             self.layers.InsertItem(item)
+            self.layers.CheckItem(new_index)
             self.layers.Select(new_index)
 
-            wx.PostEvent(self.Parent, UpdateCanvasEvent())
+            wx.PostEvent(self.Parent, SwapLayerEvent(layers=(selected, new_index)))
 
     def __on_layer_remove(self, event: LayerRemoveEvent):
         """Removes the currently selected layer.
