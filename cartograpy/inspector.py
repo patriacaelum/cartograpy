@@ -11,12 +11,14 @@ from cartograpy import (
     EVT_LAYER_FORWARD,
     EVT_LAYER_REMOVE,
     EVT_SWAP_LAYER,
+    EVT_UPDATE_VISIBILITY,
     LayerAddEvent,
     LayerBackwardEvent,
     LayerDuplicateEvent,
     LayerForwardEvent,
     LayerRemoveEvent,
     SwapLayerEvent,
+    UpdateVisibilityEvent,
 )
 from cartograpy.layer_menu import LayerMenu
 from cartograpy.minimap import Minimap
@@ -178,7 +180,7 @@ class Inspector(wx.Panel):
         ------------
         event: wx.ListEvent
         """
-        wx.PostEvent(self.Parent, UpdateCanvasEvent())
+        wx.PostEvent(self.Parent, UpdateVisibilityEvent())
 
     def __size_widgets(self):
         """Generates the layout for the inspector panel."""

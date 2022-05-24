@@ -26,11 +26,13 @@ from cartograpy import (
     EVT_LAYER_REMOVE,
     EVT_SWAP_LAYER,
     EVT_UPDATE_LAYER,
+    EVT_UPDATE_VISIBILITY,
     LayerAddEvent,
     LayerDuplicateEvent,
     LayerRemoveEvent,
     SwapLayerEvent,
     UpdateLayerEvent,
+    UpdateVisibilityEvent,
     Rect
 )
 from cartograpy.canvas import Canvas
@@ -82,6 +84,7 @@ class MainWindow(wx.Frame):
         self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
         self.Bind(EVT_SWAP_LAYER, self.__on_swap_layer)
         self.Bind(EVT_UPDATE_LAYER, self.__on_update_layer)
+        self.Bind(EVT_UPDATE_VISIBILITY, self.__on_update_visibility)
 
         self.counter = 0
         self.images = dict()
@@ -147,11 +150,13 @@ class MainWindow(wx.Frame):
 
         # Update minimap
         self.inspector.minimap.order.append(self.counter)
+        self.inspector.minimap.visibility.append(False)
         self.inspector.minimap.paths[self.counter] = temp_file
         self.inspector.minimap.destinations.append(rect=destination)
 
         # Update canvas
         self.canvas.order.append(self.counter)
+        self.canvas.visibility.append(False)
         self.canvas.paths[self.counter] = temp_file
         self.canvas.bitmaps[temp_file] = bitmap
         self.canvas.destinations.append(rect=destination)
@@ -183,11 +188,13 @@ class MainWindow(wx.Frame):
 
         # Update minimap
         self.inspector.minimap.order.insert(index, self.counter)
+        self.inspector.minimap.visibility.insert(index, False)
         self.inspector.minimap.paths[self.counter] = path
         self.inspector.minimap.destinations.insert(index=index, rect=destination)
 
         # Update canvas
         self.canvas.order.insert(index, self.counter)
+        self.canvas.visibility.insert(index, False)
         self.canvas.paths[self.counter] = path
         self.canvas.destinations.insert(index=index, rect=destination)
 
@@ -215,11 +222,13 @@ class MainWindow(wx.Frame):
 
         # Update minimap
         del self.inspector.minimap.order[index]
+        del self.inspector.minimap.visibility[index]
         del self.inspector.minimap.paths[item_data]
         self.inspector.minimap.delete(index)
 
         # Update canvas
         del self.canvas.order[index]
+        del self.canvas.visibility[index]
         del self.canvas.paths[item_data]
         self.canvas.destinations.delete(index)
 
@@ -262,9 +271,11 @@ class MainWindow(wx.Frame):
         j = -(j + 1)
 
         self.canvas.order[i], self.canvas.order[j] = self.canvas.order[j], self.canvas.order[i]
+        self.canvas.visibility[i], self.canvas.visibility[j] = self.canvas.visibility[j], self.canvas.visibility[i]
         self.canvas.destinations.rects[:,[i,j]] = self.canvas.destinations.rects[:,[j,i]]
 
         self.inspector.minimap.order[i], self.inspector.minimap.order[j] = self.inspector.minimap.order[j], self.inspector.minimap.order[i]
+        self.inspector.minimap.visibility[i], self.inspector.minimap.visibility[j] = self.inspector.minimap.visibility[j], self.inspector.minimap.visibility[i]
         self.inspector.minimap.destinations.rects[:,[i,j]] = self.inspector.minimap.destinations.rects[:,[j,i]]
 
         self.Refresh()
@@ -282,6 +293,22 @@ class MainWindow(wx.Frame):
 
         self.canvas.destinations.move(index=index, dx=event.dx, dy=event.dy)
         self.__update_minimap()
+
+        self.Refresh()
+
+    def __on_update_visibility(self, event: UpdateVisibilityEvent):
+        """Updates the visibility of the currently selected layer.
+
+        Parameters
+        ------------
+        event: UpdateVisibilityEvent
+            the event is expected to have a boolean `show` property.
+        """
+        selected = self.inspector.layers.GetFirstSelected()
+        index = -(selected + 1)
+
+        self.canvas.visibility[index] = not self.canvas.visibility[index]
+        self.inspector.minimap.visibility[index] = not self.inspector.minimap.visibility[index]
 
         self.Refresh()
 

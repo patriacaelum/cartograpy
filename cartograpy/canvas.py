@@ -36,6 +36,7 @@ class Canvas(wx.Panel):
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
 
         self.order = list()
+        self.visibility = list()
         self.paths = dict()
         self.bitmaps = dict()
         self.destinations = Rects()
@@ -115,6 +116,9 @@ class Canvas(wx.Panel):
         gc = wx.GraphicsContext.Create(dc)
 
         for n, key in enumerate(self.order):
+            if not self.visibility[n]:
+                continue
+
             gc.DrawBitmap(
                 bmp=self.bitmaps[self.paths[key]],
                 **self.destinations[n].to_dict(),
