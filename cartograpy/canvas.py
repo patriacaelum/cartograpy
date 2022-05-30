@@ -47,6 +47,8 @@ class Canvas(wx.Panel):
         self.Bind(wx.EVT_MIDDLE_DOWN, self.__to_parent)
         self.Bind(wx.EVT_MOTION, self.__to_parent)
 
+        self.Bind(wx.EVT_KEY_DOWN, self.__to_parent)
+
         self.Bind(wx.EVT_PAINT, self.__on_paint)
 
     def zoom(self, dz: int = 0):
