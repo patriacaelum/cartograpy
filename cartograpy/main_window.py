@@ -25,17 +25,14 @@ from cartograpy import (
     EVT_LAYER_DUPLICATE,
     EVT_LAYER_REMOVE,
     EVT_SWAP_LAYER,
-    EVT_UPDATE_CAMERA,
-    EVT_UPDATE_LAYER,
     EVT_UPDATE_VISIBILITY,
     LayerAddEvent,
     LayerDuplicateEvent,
     LayerRemoveEvent,
     SwapLayerEvent,
-    UpdateCameraEvent,
-    UpdateLayerEvent,
     UpdateVisibilityEvent,
-    Rect
+    Rect,
+    Rects,
 )
 from cartograpy.canvas import Canvas
 from cartograpy.inspector import Inspector
@@ -79,19 +76,26 @@ class MainWindow(wx.Frame):
         self.__init_toolbar()
         self.__size_widgets()
 
+        self.Bind(wx.EVT_LEFT_DOWN, self.__on_left_down)
+        self.Bind(wx.EVT_MIDDLE_DOWN, self.__on_middle_down)
+        self.Bind(wx.EVT_MOTION, self.__on_motion)
+        self.Bind(wx.EVT_MOUSEWHEEL, self.__on_mousewheel)
+
         self.Bind(wx.EVT_TOOL, self.__on_tool_colourpicker, id=self.tool_colourpicker.GetId())
 
         self.Bind(EVT_LAYER_ADD, self.__on_layer_add)
         self.Bind(EVT_LAYER_DUPLICATE, self.__on_layer_duplicate)
         self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
         self.Bind(EVT_SWAP_LAYER, self.__on_swap_layer)
-        self.Bind(EVT_UPDATE_CAMERA, self.__on_update_camera)
-        self.Bind(EVT_UPDATE_LAYER, self.__on_update_layer)
         self.Bind(EVT_UPDATE_VISIBILITY, self.__on_update_visibility)
 
         self.counter = 0
-        self.images = dict()
-        self.filenames = dict()
+        self.paths = dict()
+        self.bitmaps = dict()
+        self.destinations = Rects()
+
+        self.x_mouse = 0
+        self.y_mouse = 0
 
         self.temp_dir = os.path.join(ROOT_DIR, "temp")
         shutil.rmtree(self.temp_dir)
@@ -145,27 +149,31 @@ class MainWindow(wx.Frame):
         bitmap = wx.Bitmap(name=temp_file)
         destination = Rect(w=bitmap.GetWidth(), h=bitmap.GetHeight())
 
+        self.paths[self.counter] = temp_file
+        self.bitmaps[temp_file] = bitmap
+        self.destinations.append(rect=destination)
+
+        # Update canvas
+        self.canvas.order.append(self.counter)
+        self.canvas.visibility.append(False)
+        self.canvas.paths[self.counter] = temp_file
+        self.canvas.bitmaps[temp_file] = self.__scale(bitmap, self.canvas.scale_factor)
+        self.canvas.destinations.append(rect=destination.scale(self.canvas.scale_factor))
+    
+        # Update minimap
+        self.inspector.minimap.order.append(self.counter)
+        self.inspector.minimap.visibility.append(False)
+        self.inspector.minimap.paths[self.counter] = temp_file
+        self.inspector.minimap.destinations.append(rect=destination)
+        self.__update_minimap(resize=True)
+
         # Update inspector
         self.inspector.layers.InsertItem(0, f"layer_{self.counter}")
         self.inspector.layers.SetItemData(0, self.counter)
         self.inspector.layers.CheckItem(0)
         self.inspector.layers.Select(0)
 
-        # Update minimap
-        self.inspector.minimap.order.append(self.counter)
-        self.inspector.minimap.visibility.append(False)
-        self.inspector.minimap.paths[self.counter] = temp_file
-        self.inspector.minimap.destinations.append(rect=destination)
-
-        # Update canvas
-        self.canvas.order.append(self.counter)
-        self.canvas.visibility.append(False)
-        self.canvas.paths[self.counter] = temp_file
-        self.canvas.bitmaps[temp_file] = bitmap
-        self.canvas.destinations.append(rect=destination)
-
         self.counter += 1
-        self.__update_minimap(resize=True)
         self.Refresh()
 
     def __on_layer_duplicate(self, event: LayerDuplicateEvent):
@@ -183,17 +191,8 @@ class MainWindow(wx.Frame):
         destination = self.canvas.destinations[selected_data]
         index = -(selected + 1)
 
-        # Update inspector
-        self.inspector.layers.InsertItem(selected, f"layer_{self.counter}")
-        self.inspector.layers.SetItemData(selected, self.counter)
-        self.inspector.layers.CheckItem(selected)
-        self.inspector.layers.Select(selected)
-
-        # Update minimap
-        self.inspector.minimap.order.insert(index, self.counter)
-        self.inspector.minimap.visibility.insert(index, False)
-        self.inspector.minimap.paths[self.counter] = path
-        self.inspector.minimap.destinations.insert(index=index, rect=destination)
+        self.paths[self.counter] = path
+        self.destinations.insert(index=index, rect=destination)
 
         # Update canvas
         self.canvas.order.insert(index, self.counter)
@@ -201,8 +200,20 @@ class MainWindow(wx.Frame):
         self.canvas.paths[self.counter] = path
         self.canvas.destinations.insert(index=index, rect=destination)
 
-        self.counter += 1
+        # Update minimap
+        self.inspector.minimap.order.insert(index, self.counter)
+        self.inspector.minimap.visibility.insert(index, False)
+        self.inspector.minimap.paths[self.counter] = path
+        self.inspector.minimap.destinations.insert(index=index, rect=destination)
         self.__update_minimap(resize=True)
+
+        # Update inspector
+        self.inspector.layers.InsertItem(selected, f"layer_{self.counter}")
+        self.inspector.layers.SetItemData(selected, self.counter)
+        self.inspector.layers.CheckItem(selected)
+        self.inspector.layers.Select(selected)
+
+        self.counter += 1
         self.Refresh()
 
     def __on_layer_remove(self, event: LayerRemoveEvent):
@@ -217,17 +228,15 @@ class MainWindow(wx.Frame):
         """
         selected = self.inspector.layers.GetFirstSelected()
         item_data = self.inspector.layers.GetItemData(selected)
+        path = self.paths[item_data]
         index = -(selected + 1)
+
+        del self.paths[item_data]
+        self.destinations.delete(index)
 
         # Update inspector
         self.inspector.layers.DeleteItem(selected)
         self.inspector.layers.Select(selected)
-
-        # Update minimap
-        del self.inspector.minimap.order[index]
-        del self.inspector.minimap.visibility[index]
-        del self.inspector.minimap.paths[item_data]
-        self.inspector.minimap.delete(index)
 
         # Update canvas
         del self.canvas.order[index]
@@ -235,12 +244,112 @@ class MainWindow(wx.Frame):
         del self.canvas.paths[item_data]
         self.canvas.destinations.delete(index)
 
-        path = self.canvas.paths[item_data]
+        # Update minimap
+        del self.inspector.minimap.order[index]
+        del self.inspector.minimap.visibility[index]
+        del self.inspector.minimap.paths[item_data]
+        self.inspector.minimap.delete(index)
 
-        if path not in self.canvas.paths.values():
+        if path not in self.paths.values():
+            del self.bitmaps[path]
             del self.inspector.minimap.bitmaps[path]
             del self.canvas.bitmaps[path]
             os.remove(path)
+
+        self.__update_minimap(resize=True)
+        self.Refresh()
+
+    def __on_left_down(self, event: wx.MouseEvent):
+        """Processes mouse left button down events.
+
+        Parameters
+        ------------
+        event: wx.MouseEvent
+            contains information about the events generated by the mouse.
+        """
+        self.x_mouse, self.y_mouse = event.GetPosition()
+
+    def __on_middle_down(self, event: wx.MouseEvent):
+        """Processes mouse middle button down events.
+
+        Parameters
+        ------------
+        event: wx.MouseEvent
+            contains information about the events generated by the mouse.
+        """
+        self.x_mouse, self.y_mouse = event.GetPosition()
+
+    def __on_motion(self, event: wx.MouseEvent):
+        """Processes mouse movement events.
+
+        Parameters
+        ------------
+        event: wx.MouseEvent
+            contains information about the events generated by the mouse.
+        """
+        # Move a single layer
+        if event.LeftIsDown():
+            x, y = event.GetPosition()
+
+            dx = x - self.x_mouse
+            dy = y - self.y_mouse
+
+            self.x_mouse = x
+            self.y_mouse = y
+
+            selected = self.inspector.layers.GetFirstSelected()
+            index = -(selected + 1)
+
+            self.canvas.destinations.move(index=index, dx=dx, dy=dy)
+            self.__update_minimap()
+
+            self.Refresh()
+
+        # Pan camera
+        elif event.MiddleIsDown():
+            x, y = event.GetPosition()
+
+            dx = x - self.x_mouse
+            dy = y - self.y_mouse
+
+            self.x_mouse = x
+            self.y_mouse = y
+
+            for i in range(len(self.destinations)):
+                self.canvas.destinations.move(index=i, dx=dx, dy=dy)
+
+            self.__update_minimap()
+            self.Refresh()
+
+    def __on_mousewheel(self, event: wx.MouseEvent):
+        """Zooms in and out.
+
+        Parameters
+        ------------
+        event: wx.MouseEvent
+            contains information about the events generated by the mouse.
+        """
+        x, y = event.GetPosition()
+        rotation = event.GetWheelRotation()
+
+        old_factor = self.canvas.scale_factor
+
+        if rotation > 0:
+            self.canvas.zoom(dz=1)
+        
+        elif rotation < 0:
+            self.canvas.zoom(dz=-1)
+        
+        # Update destinations
+        n_layers = len(self.canvas.destinations)
+
+        self.canvas.destinations.rects[0] = np.full(n_layers, x) - (self.canvas.scale_factor / old_factor) * (np.full(n_layers, x) - self.canvas.destinations.x)
+        self.canvas.destinations.rects[1] = np.full(n_layers, y) - (self.canvas.scale_factor / old_factor) * (np.full(n_layers, y) - self.canvas.destinations.y)
+        self.canvas.destinations.rects[2] = self.destinations.w * self.canvas.scale_factor
+        self.canvas.destinations.rects[3] = self.destinations.h * self.canvas.scale_factor
+
+        for path, bitmap in self.bitmaps.items():
+            self.canvas.bitmaps[path] = self.__scale(bitmap, self.canvas.scale_factor)
 
         self.__update_minimap(resize=True)
         self.Refresh()
@@ -258,6 +367,7 @@ class MainWindow(wx.Frame):
                 return
 
             colour = dialog.GetColourData().GetColour()
+
         self.Refresh()
 
     def __on_swap_layer(self, event: SwapLayerEvent):
@@ -280,32 +390,6 @@ class MainWindow(wx.Frame):
         self.inspector.minimap.order[i], self.inspector.minimap.order[j] = self.inspector.minimap.order[j], self.inspector.minimap.order[i]
         self.inspector.minimap.visibility[i], self.inspector.minimap.visibility[j] = self.inspector.minimap.visibility[j], self.inspector.minimap.visibility[i]
         self.inspector.minimap.destinations.rects[:,[i,j]] = self.inspector.minimap.destinations.rects[:,[j,i]]
-
-        self.Refresh()
-
-    def __on_update_camera(self, event: UpdateCameraEvent):
-        """Updates the camera view in the minimap.
-
-        Parameters
-        ------------
-        event: UpdateCameraEvent
-        """
-        self.__update_minimap()
-        self.Refresh()
-
-    def __on_update_layer(self, event: UpdateLayerEvent):
-        """Updates the currently selected layer in the inspector.
-
-        Parameters
-        ------------
-        event: UpdateLayerEvent
-            the event is expected to have `dx` and `dy` properties.
-        """
-        selected = self.inspector.layers.GetFirstSelected()
-        index = -(selected + 1)
-
-        self.canvas.destinations.move(index=index, dx=event.dx, dy=event.dy)
-        self.__update_minimap()
 
         self.Refresh()
 
@@ -379,10 +463,13 @@ class MainWindow(wx.Frame):
         # Update resized bitmaps
         self.inspector.minimap.scale_factor = factor
 
-        for path, bitmap in self.canvas.bitmaps.items():
-            image = bitmap.ConvertToImage().Scale(
-                width=int(bitmap.GetWidth() * factor), 
-                height=int(bitmap.GetHeight() * factor),
-            )
+        for path, bitmap in self.bitmaps.items():
+            self.inspector.minimap.bitmaps[path] = self.__scale(bitmap, factor)
 
-            self.inspector.minimap.bitmaps[path] = image.ConvertToBitmap()
+    @staticmethod
+    def __scale(bitmap, scale):
+        """Scales a bitmap."""
+        return bitmap.ConvertToImage().Scale(
+            width=int(bitmap.GetWidth() * scale), 
+            height=int(bitmap.GetHeight() * scale)
+        ).ConvertToBitmap()
