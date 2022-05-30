@@ -105,6 +105,15 @@ class MainWindow(wx.Frame):
         self.Bind(EVT_SWAP_LAYER, self.__on_swap_layer)
         self.Bind(EVT_UPDATE_VISIBILITY, self.__on_update_visibility)
 
+        self.reset()
+
+    def reset(self):
+        """Clears the current map and resets all values."""
+        self.canvas.reset()
+        self.inspector.reset()
+
+        self.saved = False
+
         self.counter = 0
         self.paths = dict()
         self.bitmaps = dict()
@@ -116,6 +125,30 @@ class MainWindow(wx.Frame):
         self.temp_dir = os.path.join(ROOT_DIR, "temp")
         shutil.rmtree(self.temp_dir)
         os.mkdir(self.temp_dir)
+
+        self.Refresh()
+
+    def __continue(self):
+        """Checks if the current state is saved and if not, asks the user if
+        they want to continue a new action.
+
+        Returns
+        ---------
+        bool
+            `True` if the user confirms, `False` otherwise.
+        """
+        if not self.saved:
+            confirm = wx.MessageBox(
+                message="Current map has not been saved. Continue anyway?",
+                caption="Current map not saved",
+                style=wx.ICON_QUESTION | wx.YES_NO,
+                parent=self,
+            )
+
+            if confirm == wx.NO:
+                return False
+
+        return True
 
     def __init_menubar(self):
         """Initializes the menu bar.
@@ -413,13 +446,31 @@ class MainWindow(wx.Frame):
         pass
 
     def __on_menubar_file_new(self, event: wx.MenuEvent):
-        pass
+        """Creates a new map.
+
+        Parameters
+        ------------
+        event: wx.MenuEvent
+            contains information about the menu event.
+        """ 
+        if not self.__continue:
+            return
+
+        self.reset()
 
     def __on_menubar_file_open(self, event: wx.MenuEvent):
         pass
 
     def __on_menubar_file_quit(self, event: wx.MenuEvent):
-        pass
+        """Quits the program.
+
+        Parameters
+        ------------
+        event: wx.MenuEvent
+            contains information about the menu event.
+        """
+        if self.__continue:
+            self.Close()
 
     def __on_menubar_file_save(self, event: wx.MenuEvent):
         pass

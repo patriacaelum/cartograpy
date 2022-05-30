@@ -34,6 +34,21 @@ class Canvas(wx.Panel):
 
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
 
+        # Mouse events
+        self.Bind(wx.EVT_LEFT_DOWN, self.__to_parent)
+        self.Bind(wx.EVT_MIDDLE_DOWN, self.__to_parent)
+        self.Bind(wx.EVT_MOTION, self.__to_parent)
+
+        # Keyboard events
+        self.Bind(wx.EVT_KEY_DOWN, self.__to_parent)
+
+        # Render events
+        self.Bind(wx.EVT_PAINT, self.__on_paint)
+
+        self.reset()
+
+    def reset(self):
+        """Clears the current canvas and resets all values."""
         self.order = list()
         self.visibility = list()
         self.paths = dict()
@@ -42,14 +57,6 @@ class Canvas(wx.Panel):
 
         self.zoom_level = 0
         self.scale_factor = 1
-
-        self.Bind(wx.EVT_LEFT_DOWN, self.__to_parent)
-        self.Bind(wx.EVT_MIDDLE_DOWN, self.__to_parent)
-        self.Bind(wx.EVT_MOTION, self.__to_parent)
-
-        self.Bind(wx.EVT_KEY_DOWN, self.__to_parent)
-
-        self.Bind(wx.EVT_PAINT, self.__on_paint)
 
     def zoom(self, dz: int = 0):
         """Increases or decreases the zoom level and computes the scale factor.

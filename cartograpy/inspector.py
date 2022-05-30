@@ -71,6 +71,14 @@ class Inspector(wx.Panel):
         self.Bind(EVT_LAYER_FORWARD, self.__on_layer_forward)
         self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
 
+        self.reset()
+
+    def reset(self):
+        """Clears the current inspector and resets all values."""
+        self.minimap.reset()
+        self.layer_menu.reset()
+        self.layers.DeleteAllItems()
+
     def __init_layers(self):
         """Initializes the layer controller."""
         self.layers = wx.ListCtrl(

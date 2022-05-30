@@ -37,6 +37,12 @@ class Minimap(wx.Panel):
 
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
 
+        self.Bind(wx.EVT_PAINT, self.__on_paint)
+
+        self.reset()
+
+    def reset(self):
+        """Clears the current minimap and resets all values."""
         self.scale_factor = 1
 
         self.order = list()
@@ -47,8 +53,6 @@ class Minimap(wx.Panel):
 
         self.camera = Rect(w=400, h=400)
         self.camera_view = wx.Bitmap.FromRGBA(400, 400, 255, 255, 255, 128)
-
-        self.Bind(wx.EVT_PAINT, self.__on_paint)
 
     def __on_paint(self, event: wx.PaintEvent):
         """Repaints the minimap.
