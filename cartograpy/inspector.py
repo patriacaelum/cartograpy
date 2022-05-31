@@ -73,6 +73,21 @@ class Inspector(wx.Panel):
 
         self.reset()
 
+    def to_dict(self):
+        """Returns the state of the inspector as a JSON compatible dictionary.
+
+        Returns
+        ---------
+        dict:
+            the JSON compatible state of the inspector.
+        """
+        data = {
+            "layers": [{"text": self.layers.GetItemText(i), "data": self.layers.GetItemData(i), "checked": self.layers.IsItemChecked(i)} for i in range(self.layers.GetItemCount())],
+            "minimap": self.minimap.to_dict(),
+        }
+
+        return data
+
     def reset(self):
         """Clears the current inspector and resets all values."""
         self.minimap.reset()

@@ -39,6 +39,9 @@ from cartograpy.canvas import Canvas
 from cartograpy.inspector import Inspector
 
 
+CTPY_WILDCARD = "CTPY Files (*.ctpy)|*.ctpy"
+
+
 class MainWindow(wx.Frame):
     """The main window that houses the application.
 
@@ -107,12 +110,31 @@ class MainWindow(wx.Frame):
 
         self.reset()
 
+    def to_dict(self):
+        """Returns the state of the map as a JSON compatible dictionary.
+
+        Returns
+        ---------
+        dict:
+            the JSON compatible state of the inspector.
+        """
+        data = {
+            "counter": self.counter,
+            "paths": self.paths,
+            "destinations": self.destinations.tolist(),
+            "canvas": self.canvas.to_dict(),
+            "inspector": self.inspector.to_dict(),
+        }
+
+        return data
+
     def reset(self):
         """Clears the current map and resets all values."""
         self.canvas.reset()
         self.inspector.reset()
 
         self.saved = False
+        self.savefile = None
 
         self.counter = 0
         self.paths = dict()
@@ -473,10 +495,23 @@ class MainWindow(wx.Frame):
             self.Close()
 
     def __on_menubar_file_save(self, event: wx.MenuEvent):
-        pass
+        """Updates the savefile with the current map."""
+        if self.savefile is None:
+            self.__save_dialog()
+
+        if not self.saved:
+            self.__save()
 
     def __on_menubar_file_save_as(self, event: wx.MenuEvent):
-        pass
+        """Saves the current map as a new file.
+
+        Parameters
+        ------------
+        event: wx.MenuEvent
+            contains information about the menu event.
+        """
+        self.__save_dialog()
+        self.__save()
 
     def __on_middle_down(self, event: wx.MouseEvent):
         """Processes mouse middle button down events.
@@ -674,6 +709,43 @@ class MainWindow(wx.Frame):
 
         for path, bitmap in self.bitmaps.items():
             self.inspector.minimap.bitmaps[path] = self.__scale(bitmap, factor)
+
+    def __save(self):
+        """Writes the current map to disk."""
+        # Write JSON data to temporary directory
+        with open(os.path.join(self.temp_dir, "data.json"), "w") as file:
+            json.dump(self.to_dict(), file)
+
+        # Compress temporary directory
+        archivefile = shutil.make_archive(
+            base_name=self.savefile,
+            format="gztar",
+            root_dir=self.temp_dir,
+        )
+
+        # Rename archive to savefile
+        shutil.move(src=archivefile, dst=self.savefile)
+
+        self.saved = True
+
+    def __save_dialog(self):
+        """Asks the user for the savefile of the current map."""
+        with wx.FileDialog(
+            parent=self,
+            message="Save current map",
+            wildcard=CTPY_WILDCARD,
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        ) as dialog:
+            if dialog.ShowModal() == wx.ID_CANCEL:
+                return
+
+            savefile = dialog.GetPath()
+
+        # Add ctpy file extension
+        if os.path.splitext(savefile)[0] == savefile:
+            savefile += ".ctpy"
+
+        self.savefile = savefile
 
     @staticmethod
     def __scale(bitmap, scale):

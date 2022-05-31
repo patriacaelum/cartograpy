@@ -47,6 +47,25 @@ class Canvas(wx.Panel):
 
         self.reset()
 
+    def to_dict(self):
+        """Returns the state of the canvas as a JSON compatible dictionary.
+
+        Returns
+        ---------
+        dict:
+            the JSON compatible state of the inspector.
+        """
+        data = {
+            "order": self.order,
+            "visibility": self.visibility,
+            "paths": self.paths,
+            "destinations": self.destinations.tolist(),
+            "zoom_level": self.zoom_level,
+            "scale_factor": self.scale_factor,
+        }
+
+        return data
+
     def reset(self):
         """Clears the current canvas and resets all values."""
         self.order = list()
