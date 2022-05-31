@@ -53,7 +53,7 @@ class Canvas(wx.Panel):
         Returns
         ---------
         dict:
-            the JSON compatible state of the inspector.
+            the JSON compatible state of the canvas.
         """
         data = {
             "order": self.order,

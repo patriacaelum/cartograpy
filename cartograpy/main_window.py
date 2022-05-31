@@ -11,6 +11,7 @@ Optimizations that can be done:
 """
 
 
+import json
 import math
 import os
 import shutil
@@ -40,6 +41,7 @@ from cartograpy.inspector import Inspector
 
 
 CTPY_WILDCARD = "CTPY Files (*.ctpy)|*.ctpy"
+JSON_WILDCARD = "JSON Files (*.json)|*.json"
 
 
 class MainWindow(wx.Frame):
@@ -465,7 +467,39 @@ class MainWindow(wx.Frame):
         self.x_mouse, self.y_mouse = event.GetPosition()
 
     def __on_menubar_file_export_as(self, event: wx.MenuEvent):
-        pass
+        """Exports the current map as a JSON file.
+
+        Parameters
+        ------------
+        event: wx.MenuEvent
+            contains information about the menu event.
+        """
+        with wx.FileDialog(
+            parent=self,
+            message="Save current map",
+            wildcard=JSON_WILDCARD,
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        ) as dialog:
+            if dialog.ShowModal() == wx.ID_CANCEL:
+                return
+
+            jsonfile = dialog.GetPath()
+
+        # Add json file extension
+        if os.path.splitext(jsonfile)[0] == jsonfile:
+            jsonfile += ".json"
+
+        data = {}
+
+        for i in range(self.inspector.layers.GetItemCount()):
+            key = self.inspector.layers.GetItemText(i)
+            index = self.inspector.layers.GetItemData(i)
+            value = {"position": self.canvas.destiations[i].to_dict()}
+
+            data[key] = value
+
+        with open(jsonfile, "w") as file:
+            json.dump(data, file)
 
     def __on_menubar_file_new(self, event: wx.MenuEvent):
         """Creates a new map.
