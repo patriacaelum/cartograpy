@@ -8,9 +8,12 @@ Optimizations that can be done:
 - Only recreate the minimap images when the scaling factor from canvas to
   minimap is changed
 
+TODO: on file open
+
 """
 
 
+import json
 import math
 import os
 import shutil
@@ -37,6 +40,10 @@ from cartograpy import (
 )
 from cartograpy.canvas import Canvas
 from cartograpy.inspector import Inspector
+
+
+CTPY_WILDCARD = "CTPY Files (*.ctpy)|*.ctpy"
+JSON_WILDCARD = "JSON Files (*.json)|*.json"
 
 
 class MainWindow(wx.Frame):
@@ -74,6 +81,7 @@ class MainWindow(wx.Frame):
         self.canvas = Canvas(parent=self)
         self.inspector = Inspector(parent=self)
 
+        self.__init_menubar()
         self.__init_toolbar()
         self.__size_widgets()
 
@@ -86,6 +94,14 @@ class MainWindow(wx.Frame):
         # Keyboard events
         self.Bind(wx.EVT_KEY_DOWN, self.__on_key_down)
 
+        # Menu events
+        self.Bind(wx.EVT_MENU, self.__on_menubar_file_new, id=self.menubar_file_new.GetId())
+        self.Bind(wx.EVT_MENU, self.__on_menubar_file_open, id=self.menubar_file_open.GetId())
+        self.Bind(wx.EVT_MENU, self.__on_menubar_file_save, id=self.menubar_file_save.GetId())
+        self.Bind(wx.EVT_MENU, self.__on_menubar_file_save_as, id=self.menubar_file_save_as.GetId())
+        self.Bind(wx.EVT_MENU, self.__on_menubar_file_export_as, id=self.menubar_file_export_as.GetId())
+        self.Bind(wx.EVT_MENU, self.__on_menubar_file_quit, id=self.menubar_file_quit.GetId())
+
         # Tool events
         self.Bind(wx.EVT_TOOL, self.__on_tool_colourpicker, id=self.tool_colourpicker.GetId())
 
@@ -95,6 +111,34 @@ class MainWindow(wx.Frame):
         self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
         self.Bind(EVT_SWAP_LAYER, self.__on_swap_layer)
         self.Bind(EVT_UPDATE_VISIBILITY, self.__on_update_visibility)
+
+        self.reset()
+
+    def to_dict(self):
+        """Returns the state of the map as a JSON compatible dictionary.
+
+        Returns
+        ---------
+        dict:
+            the JSON compatible state of the inspector.
+        """
+        data = {
+            "counter": self.counter,
+            "paths": self.paths,
+            "destinations": self.destinations.tolist(),
+            "canvas": self.canvas.to_dict(),
+            "inspector": self.inspector.to_dict(),
+        }
+
+        return data
+
+    def reset(self):
+        """Clears the current map and resets all values."""
+        self.canvas.reset()
+        self.inspector.reset()
+
+        self.saved = False
+        self.savefile = None
 
         self.counter = 0
         self.paths = dict()
@@ -107,6 +151,115 @@ class MainWindow(wx.Frame):
         self.temp_dir = os.path.join(ROOT_DIR, "temp")
         shutil.rmtree(self.temp_dir)
         os.mkdir(self.temp_dir)
+
+        self.Refresh()
+
+    def __continue(self):
+        """Checks if the current state is saved and if not, asks the user if
+        they want to continue a new action.
+
+        Returns
+        ---------
+        bool
+            `True` if the user confirms, `False` otherwise.
+        """
+        if not self.saved:
+            confirm = wx.MessageBox(
+                message="Current map has not been saved. Continue anyway?",
+                caption="Current map not saved",
+                style=wx.ICON_QUESTION | wx.YES_NO,
+                parent=self,
+            )
+
+            if confirm == wx.NO:
+                return False
+
+        return True
+
+    def __init_menubar(self):
+        """Initializes the menu bar.
+
+        The menubar consists of the items:
+
+        - File
+
+        """
+        self.menubar = wx.MenuBar(0)
+
+        self.__init_menubar_file()
+        self.menubar.Append(self.menubar_file, "File")
+
+        self.SetMenuBar(self.menubar)
+
+    def __init_menubar_file(self):
+        """Initializes the `File` menu.
+
+        The `File` menu consists of the items:
+
+        - New
+        - Open...
+        - Close
+        - Save
+        - Save As...
+        - Export As...
+        - Exit
+
+        """
+        self.menubar_file = wx.Menu()
+
+        self.menubar_file_new = wx.MenuItem(
+            parentMenu=self.menubar_file,
+            id=wx.ID_ANY,
+            text="New\tCTRL+N",
+            kind=wx.ITEM_NORMAL,
+        )
+        self.menubar_file_open = wx.MenuItem(
+            parentMenu=self.menubar_file,
+            id=wx.ID_ANY,
+            text="Open...\tCTRL+O",
+            kind=wx.ITEM_NORMAL,
+        )
+        self.menubar_file_close = wx.MenuItem(
+            parentMenu=self.menubar_file,
+            id=wx.ID_ANY,
+            text="Close\tCTRL+W",
+            kind=wx.ITEM_NORMAL,
+        )
+        self.menubar_file_save = wx.MenuItem(
+            parentMenu=self.menubar_file,
+            id=wx.ID_ANY,
+            text="Save\tCTRL+S",
+            kind=wx.ITEM_NORMAL,
+        )
+        self.menubar_file_save_as = wx.MenuItem(
+            parentMenu=self.menubar_file,
+            id=wx.ID_ANY,
+            text="Save As...\tCTRL+SHIFT+S",
+            kind=wx.ITEM_NORMAL,
+        )
+        self.menubar_file_export_as = wx.MenuItem(
+            parentMenu=self.menubar_file,
+            id=wx.ID_ANY,
+            text="Export As...\tCTRL+E",
+            kind=wx.ITEM_NORMAL,
+        )
+        self.menubar_file_quit = wx.MenuItem(
+            parentMenu=self.menubar_file,
+            id=wx.ID_ANY,
+            text="Quit\tCTRL+Q",
+            kind=wx.ITEM_NORMAL,
+        )
+
+        self.menubar_file.Append(self.menubar_file_new)
+        self.menubar_file.AppendSeparator()
+        self.menubar_file.Append(self.menubar_file_open)
+        self.menubar_file.AppendSeparator()
+        self.menubar_file.Append(self.menubar_file_save)
+        self.menubar_file.Append(self.menubar_file_save_as)
+        self.menubar_file.AppendSeparator()
+        self.menubar_file.Append(self.menubar_file_export_as)
+        self.menubar_file.AppendSeparator()
+        self.menubar_file.Append(self.menubar_file_quit)
 
     def __init_toolbar(self):
         """Initializes the toolbar.
@@ -137,6 +290,48 @@ class MainWindow(wx.Frame):
         )
 
         self.toolbar.Realize()
+
+    def __on_key_down(self, event: wx.KeyEvent): 
+        """Processes keyboard events.
+
+        Parameters
+        ------------
+        event: wx.KeyEvent
+            contains information about key press and release events.
+        """
+        keycode = event.GetKeyCode()
+
+        if keycode == wx.WXK_LEFT:
+            selected = self.inspector.layers.GetFirstSelected()
+            index = -(selected + 1)
+            self.canvas.destinations.move(index, dx=-math.ceil(self.canvas.scale_factor))
+
+            self.saved = False
+            self.Refresh()
+
+        elif keycode == wx.WXK_UP:
+            selected = self.inspector.layers.GetFirstSelected()
+            index = -(selected + 1)
+            self.canvas.destinations.move(index, dy=-math.ceil(self.canvas.scale_factor))
+
+            self.saved = False
+            self.Refresh()
+
+        elif keycode == wx.WXK_RIGHT:
+            selected = self.inspector.layers.GetFirstSelected()
+            index = -(selected + 1)
+            self.canvas.destinations.move(index, dx=math.ceil(self.canvas.scale_factor))
+
+            self.saved = False
+            self.Refresh()
+
+        elif keycode == wx.WXK_DOWN:
+            selected = self.inspector.layers.GetFirstSelected()
+            index = -(selected + 1)
+            self.canvas.destinations.move(index, dy=math.ceil(self.canvas.scale_factor))
+
+            self.saved = False
+            self.Refresh()
 
     def __on_layer_add(self, event: LayerAddEvent):
         """Adds a layer from an image file.
@@ -182,6 +377,7 @@ class MainWindow(wx.Frame):
         self.inspector.layers.Select(0)
 
         self.counter += 1
+        self.saved = False
         self.Refresh()
 
     def __on_layer_duplicate(self, event: LayerDuplicateEvent):
@@ -222,6 +418,7 @@ class MainWindow(wx.Frame):
         self.inspector.layers.Select(selected)
 
         self.counter += 1
+        self.saved = False
         self.Refresh()
 
     def __on_layer_remove(self, event: LayerRemoveEvent):
@@ -265,6 +462,7 @@ class MainWindow(wx.Frame):
             os.remove(path)
 
         self.__update_minimap(resize=True)
+        self.saved = False
         self.Refresh()
 
     def __on_left_down(self, event: wx.MouseEvent):
@@ -277,44 +475,84 @@ class MainWindow(wx.Frame):
         """
         self.x_mouse, self.y_mouse = event.GetPosition()
 
-    def __on_key_down(self, event: wx.KeyEvent): 
-        """Processes keyboard events.
+    def __on_menubar_file_export_as(self, event: wx.MenuEvent):
+        """Exports the current map as a JSON file.
 
         Parameters
         ------------
-        event: wx.KeyEvent
-            contains information about key press and release events.
+        event: wx.MenuEvent
+            contains information about the menu event.
         """
-        print('here')
-        keycode = event.GetKeyCode()
+        with wx.FileDialog(
+            parent=self,
+            message="Save current map",
+            wildcard=JSON_WILDCARD,
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        ) as dialog:
+            if dialog.ShowModal() == wx.ID_CANCEL:
+                return
 
-        if keycode == wx.WXK_LEFT:
-            selected = self.inspector.layers.GetFirstSelected()
-            index = -(selected + 1)
-            self.canvas.destinations.move(index, dx=-math.ceil(self.canvas.scale_factor))
+            jsonfile = dialog.GetPath()
 
-            self.Refresh()
+        # Add json file extension
+        if os.path.splitext(jsonfile)[0] == jsonfile:
+            jsonfile += ".json"
 
-        elif keycode == wx.WXK_UP:
-            selected = self.inspector.layers.GetFirstSelected()
-            index = -(selected + 1)
-            self.canvas.destinations.move(index, dy=-math.ceil(self.canvas.scale_factor))
+        data = {}
 
-            self.Refresh()
+        for i in range(self.inspector.layers.GetItemCount()):
+            key = self.inspector.layers.GetItemText(i)
+            index = self.inspector.layers.GetItemData(i)
+            value = {"position": self.canvas.destiations[i].to_dict()}
 
-        elif keycode == wx.WXK_RIGHT:
-            selected = self.inspector.layers.GetFirstSelected()
-            index = -(selected + 1)
-            self.canvas.destinations.move(index, dx=math.ceil(self.canvas.scale_factor))
+            data[key] = value
 
-            self.Refresh()
+        with open(jsonfile, "w") as file:
+            json.dump(data, file)
 
-        elif keycode == wx.WXK_DOWN:
-            selected = self.inspector.layers.GetFirstSelected()
-            index = -(selected + 1)
-            self.canvas.destinations.move(index, dy=math.ceil(self.canvas.scale_factor))
+    def __on_menubar_file_new(self, event: wx.MenuEvent):
+        """Creates a new map.
 
-            self.Refresh()
+        Parameters
+        ------------
+        event: wx.MenuEvent
+            contains information about the menu event.
+        """ 
+        if self.__continue:
+            self.reset()
+
+    def __on_menubar_file_open(self, event: wx.MenuEvent):
+        pass
+
+    def __on_menubar_file_quit(self, event: wx.MenuEvent):
+        """Quits the program.
+
+        Parameters
+        ------------
+        event: wx.MenuEvent
+            contains information about the menu event.
+        """
+        if self.__continue:
+            self.Close()
+
+    def __on_menubar_file_save(self, event: wx.MenuEvent):
+        """Updates the savefile with the current map."""
+        if self.savefile is None:
+            self.__save_dialog()
+
+        if not self.saved:
+            self.__save()
+
+    def __on_menubar_file_save_as(self, event: wx.MenuEvent):
+        """Saves the current map as a new file.
+
+        Parameters
+        ------------
+        event: wx.MenuEvent
+            contains information about the menu event.
+        """
+        self.__save_dialog()
+        self.__save()
 
     def __on_middle_down(self, event: wx.MouseEvent):
         """Processes mouse middle button down events.
@@ -350,6 +588,7 @@ class MainWindow(wx.Frame):
             self.canvas.destinations.move(index=index, dx=dx, dy=dy)
             self.__update_minimap()
 
+            self.saved = False
             self.Refresh()
 
         # Pan camera
@@ -415,6 +654,7 @@ class MainWindow(wx.Frame):
 
             colour = dialog.GetColourData().GetColour()
 
+        self.saved = False
         self.Refresh()
 
     def __on_swap_layer(self, event: SwapLayerEvent):
@@ -438,6 +678,7 @@ class MainWindow(wx.Frame):
         self.inspector.minimap.visibility[i], self.inspector.minimap.visibility[j] = self.inspector.minimap.visibility[j], self.inspector.minimap.visibility[i]
         self.inspector.minimap.destinations.rects[:,[i,j]] = self.inspector.minimap.destinations.rects[:,[j,i]]
 
+        self.saved = False
         self.Refresh()
 
     def __on_update_visibility(self, event: UpdateVisibilityEvent):
@@ -454,6 +695,7 @@ class MainWindow(wx.Frame):
         self.canvas.visibility[index] = not self.canvas.visibility[index]
         self.inspector.minimap.visibility[index] = not self.inspector.minimap.visibility[index]
 
+        self.saved = False
         self.Refresh()
 
     def __size_widgets(self):
@@ -512,6 +754,43 @@ class MainWindow(wx.Frame):
 
         for path, bitmap in self.bitmaps.items():
             self.inspector.minimap.bitmaps[path] = self.__scale(bitmap, factor)
+
+    def __save(self):
+        """Writes the current map to disk."""
+        # Write JSON data to temporary directory
+        with open(os.path.join(self.temp_dir, "data.json"), "w") as file:
+            json.dump(self.to_dict(), file)
+
+        # Compress temporary directory
+        archivefile = shutil.make_archive(
+            base_name=self.savefile,
+            format="gztar",
+            root_dir=self.temp_dir,
+        )
+
+        # Rename archive to savefile
+        shutil.move(src=archivefile, dst=self.savefile)
+
+        self.saved = True
+
+    def __save_dialog(self):
+        """Asks the user for the savefile of the current map."""
+        with wx.FileDialog(
+            parent=self,
+            message="Save current map",
+            wildcard=CTPY_WILDCARD,
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        ) as dialog:
+            if dialog.ShowModal() == wx.ID_CANCEL:
+                return
+
+            savefile = dialog.GetPath()
+
+        # Add ctpy file extension
+        if os.path.splitext(savefile)[0] == savefile:
+            savefile += ".ctpy"
+
+        self.savefile = savefile
 
     @staticmethod
     def __scale(bitmap, scale):

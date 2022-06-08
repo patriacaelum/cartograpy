@@ -37,18 +37,41 @@ class Minimap(wx.Panel):
 
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
 
-        self.scale_factor = 1
+        self.Bind(wx.EVT_PAINT, self.__on_paint)
 
+        self.reset()
+
+    def to_dict(self):
+        """Returns the state of the minimap as a JSON compatible dictionary.
+
+        Returns
+        ---------
+        dict:
+            the JSON compatible state of the minimap.
+        """
+        data = {
+            "order": self.order,
+            "visibility": self.visibility,
+            "paths": self.paths,
+            "destinations": self.destinations.tolist(),
+            "scale_factor": self.scale_factor,
+            "camera": self.camera.to_dict(),
+        }
+
+        return data
+
+    def reset(self):
+        """Clears the current minimap and resets all values."""
         self.order = list()
         self.visibility = list()
         self.paths = dict()
         self.bitmaps = dict()
         self.destinations = Rects()
 
+        self.scale_factor = 1
+
         self.camera = Rect(w=400, h=400)
         self.camera_view = wx.Bitmap.FromRGBA(400, 400, 255, 255, 255, 128)
-
-        self.Bind(wx.EVT_PAINT, self.__on_paint)
 
     def __on_paint(self, event: wx.PaintEvent):
         """Repaints the minimap.

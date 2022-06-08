@@ -71,6 +71,29 @@ class Inspector(wx.Panel):
         self.Bind(EVT_LAYER_FORWARD, self.__on_layer_forward)
         self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
 
+        self.reset()
+
+    def to_dict(self):
+        """Returns the state of the inspector as a JSON compatible dictionary.
+
+        Returns
+        ---------
+        dict:
+            the JSON compatible state of the inspector.
+        """
+        data = {
+            "layers": [{"text": self.layers.GetItemText(i), "data": self.layers.GetItemData(i), "checked": self.layers.IsItemChecked(i)} for i in range(self.layers.GetItemCount())],
+            "minimap": self.minimap.to_dict(),
+        }
+
+        return data
+
+    def reset(self):
+        """Clears the current inspector and resets all values."""
+        self.minimap.reset()
+        self.layer_menu.reset()
+        self.layers.DeleteAllItems()
+
     def __init_layers(self):
         """Initializes the layer controller."""
         self.layers = wx.ListCtrl(

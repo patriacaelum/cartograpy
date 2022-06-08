@@ -66,6 +66,10 @@ class LayerMenu(wx.Panel):
             handler=self.__on_button_remove,
             id=self.button_remove.GetId(),
         )
+    
+    def reset(self):
+        """Clears the current layer menu and resets all values."""
+        pass
 
     def __on_button_add(self, event: wx.CommandEvent):
         """Adds an image file as a layer.
