@@ -22,6 +22,7 @@ LayerBackwardEvent, EVT_LAYER_BACKWARD = NewEvent()
 LayerDuplicateEvent, EVT_LAYER_DUPLICATE = NewEvent()
 LayerForwardEvent, EVT_LAYER_FORWARD = NewEvent()
 LayerRemoveEvent, EVT_LAYER_REMOVE = NewEvent()
+LayerSelectedEvent, EVT_LAYER_SELECTED = NewEvent()
 SwapLayerEvent, EVT_SWAP_LAYER = NewEvent()
 UpdateVisibilityEvent, EVT_UPDATE_VISIBILITY = NewEvent()
 

@@ -17,10 +17,12 @@ from cartograpy import (
     LayerDuplicateEvent,
     LayerForwardEvent,
     LayerRemoveEvent,
+    LayerSelectedEvent,
     SwapLayerEvent,
     UpdateVisibilityEvent,
 )
 from cartograpy.layer_menu import LayerMenu
+from cartograpy.layer_properties import LayerProperties
 from cartograpy.minimap import Minimap
 
 
@@ -57,11 +59,13 @@ class Inspector(wx.Panel):
         self.SetMaxSize(wx.Size(400, -1))
 
         self.minimap = Minimap(parent=self)
+        self.layer_properties = LayerProperties(parent=self)
         self.layer_menu = LayerMenu(parent=self)
         self.__init_layers()
         self.__size_widgets()
 
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.__on_list_item_activated)
+        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.__on_list_item_selected)
         self.Bind(wx.EVT_LIST_ITEM_CHECKED, self.__on_list_item_checked)
         self.Bind(wx.EVT_LIST_ITEM_UNCHECKED, self.__on_list_item_checked)
 
@@ -102,10 +106,10 @@ class Inspector(wx.Panel):
             pos=wx.DefaultPosition,
             size=wx.DefaultSize,
             style=wx.LC_REPORT
-            | wx.LC_ALIGN_LEFT
-            | wx.LC_NO_HEADER
-            | wx.LC_SINGLE_SEL
-            | wx.LC_HRULES,
+                | wx.LC_ALIGN_LEFT
+                | wx.LC_NO_HEADER
+                | wx.LC_SINGLE_SEL
+                | wx.LC_HRULES,
             validator=wx.DefaultValidator,
             name="Layers",
         )
@@ -196,6 +200,15 @@ class Inspector(wx.Panel):
         index = event.GetIndex()
         self.layers.EditLabel(index)
 
+    def __on_list_item_selected(self, event: wx.ListEvent):
+        """Selects a new layer.
+
+        Parameters
+        ------------
+        event: LayerSelectEvent
+        """
+        wx.PostEvent(self.Parent, LayerSelectedEvent())
+
     def __on_list_item_checked(self, event: wx.ListEvent):
         """Changes the visibility of the checked layer.
 
@@ -210,6 +223,7 @@ class Inspector(wx.Panel):
         sizer = wx.BoxSizer(orient=wx.VERTICAL)
 
         sizer.Add(window=self.minimap, flag=ALL_EXPAND)
+        sizer.Add(window=self.layer_properties, flag=ALL_EXPAND)
         sizer.Add(window=self.layers, flag=ALL_EXPAND)
         sizer.Add(window=self.layer_menu, flag=ALL_EXPAND)
 
