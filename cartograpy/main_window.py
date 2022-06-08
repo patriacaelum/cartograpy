@@ -8,6 +8,8 @@ Optimizations that can be done:
 - Only recreate the minimap images when the scaling factor from canvas to
   minimap is changed
 
+TODO: on file open
+
 """
 
 
@@ -93,12 +95,12 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_KEY_DOWN, self.__on_key_down)
 
         # Menu events
-        self.Bind(self.EVT_MENU, self.__on_menubar_file_new, id=self.menubar_file_new.GetId())
-        self.Bind(self.EVT_MENU, self.__on_menubar_file_open, id=self.menubar_file_open.GetId())
-        self.Bind(self.EVT_MENU, self.__on_menubar_file_save, id=self.menubar_file_save.GetId())
-        self.Bind(self.EVT_MENU, self.__on_menubar_file_save_as, id=self.menubar_file_save_as.GetId())
-        self.Bind(self.EVT_MENU, self.__on_menubar_file_export_as, id=self.menubar_file_export_as.GetId())
-        self.Bind(self.EVT_MENU, self.__on_menubar_file_quit, id=self.menubar_file_quit.GetId())
+        self.Bind(wx.EVT_MENU, self.__on_menubar_file_new, id=self.menubar_file_new.GetId())
+        self.Bind(wx.EVT_MENU, self.__on_menubar_file_open, id=self.menubar_file_open.GetId())
+        self.Bind(wx.EVT_MENU, self.__on_menubar_file_save, id=self.menubar_file_save.GetId())
+        self.Bind(wx.EVT_MENU, self.__on_menubar_file_save_as, id=self.menubar_file_save_as.GetId())
+        self.Bind(wx.EVT_MENU, self.__on_menubar_file_export_as, id=self.menubar_file_export_as.GetId())
+        self.Bind(wx.EVT_MENU, self.__on_menubar_file_quit, id=self.menubar_file_quit.GetId())
 
         # Tool events
         self.Bind(wx.EVT_TOOL, self.__on_tool_colourpicker, id=self.tool_colourpicker.GetId())
@@ -304,6 +306,7 @@ class MainWindow(wx.Frame):
             index = -(selected + 1)
             self.canvas.destinations.move(index, dx=-math.ceil(self.canvas.scale_factor))
 
+            self.saved = False
             self.Refresh()
 
         elif keycode == wx.WXK_UP:
@@ -311,6 +314,7 @@ class MainWindow(wx.Frame):
             index = -(selected + 1)
             self.canvas.destinations.move(index, dy=-math.ceil(self.canvas.scale_factor))
 
+            self.saved = False
             self.Refresh()
 
         elif keycode == wx.WXK_RIGHT:
@@ -318,6 +322,7 @@ class MainWindow(wx.Frame):
             index = -(selected + 1)
             self.canvas.destinations.move(index, dx=math.ceil(self.canvas.scale_factor))
 
+            self.saved = False
             self.Refresh()
 
         elif keycode == wx.WXK_DOWN:
@@ -325,6 +330,7 @@ class MainWindow(wx.Frame):
             index = -(selected + 1)
             self.canvas.destinations.move(index, dy=math.ceil(self.canvas.scale_factor))
 
+            self.saved = False
             self.Refresh()
 
     def __on_layer_add(self, event: LayerAddEvent):
@@ -371,6 +377,7 @@ class MainWindow(wx.Frame):
         self.inspector.layers.Select(0)
 
         self.counter += 1
+        self.saved = False
         self.Refresh()
 
     def __on_layer_duplicate(self, event: LayerDuplicateEvent):
@@ -411,6 +418,7 @@ class MainWindow(wx.Frame):
         self.inspector.layers.Select(selected)
 
         self.counter += 1
+        self.saved = False
         self.Refresh()
 
     def __on_layer_remove(self, event: LayerRemoveEvent):
@@ -454,6 +462,7 @@ class MainWindow(wx.Frame):
             os.remove(path)
 
         self.__update_minimap(resize=True)
+        self.saved = False
         self.Refresh()
 
     def __on_left_down(self, event: wx.MouseEvent):
@@ -509,10 +518,8 @@ class MainWindow(wx.Frame):
         event: wx.MenuEvent
             contains information about the menu event.
         """ 
-        if not self.__continue:
-            return
-
-        self.reset()
+        if self.__continue:
+            self.reset()
 
     def __on_menubar_file_open(self, event: wx.MenuEvent):
         pass
@@ -581,6 +588,7 @@ class MainWindow(wx.Frame):
             self.canvas.destinations.move(index=index, dx=dx, dy=dy)
             self.__update_minimap()
 
+            self.saved = False
             self.Refresh()
 
         # Pan camera
@@ -646,6 +654,7 @@ class MainWindow(wx.Frame):
 
             colour = dialog.GetColourData().GetColour()
 
+        self.saved = False
         self.Refresh()
 
     def __on_swap_layer(self, event: SwapLayerEvent):
@@ -669,6 +678,7 @@ class MainWindow(wx.Frame):
         self.inspector.minimap.visibility[i], self.inspector.minimap.visibility[j] = self.inspector.minimap.visibility[j], self.inspector.minimap.visibility[i]
         self.inspector.minimap.destinations.rects[:,[i,j]] = self.inspector.minimap.destinations.rects[:,[j,i]]
 
+        self.saved = False
         self.Refresh()
 
     def __on_update_visibility(self, event: UpdateVisibilityEvent):
@@ -685,6 +695,7 @@ class MainWindow(wx.Frame):
         self.canvas.visibility[index] = not self.canvas.visibility[index]
         self.inspector.minimap.visibility[index] = not self.inspector.minimap.visibility[index]
 
+        self.saved = False
         self.Refresh()
 
     def __size_widgets(self):
