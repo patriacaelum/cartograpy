@@ -28,11 +28,13 @@ from cartograpy import (
     EVT_LAYER_ADD,
     EVT_LAYER_DUPLICATE,
     EVT_LAYER_REMOVE,
+    EVT_LAYER_SELECTED,
     EVT_SWAP_LAYER,
     EVT_UPDATE_VISIBILITY,
     LayerAddEvent,
     LayerDuplicateEvent,
     LayerRemoveEvent,
+    LayerSelectedEvent,
     SwapLayerEvent,
     UpdateVisibilityEvent,
     Rect,
@@ -109,6 +111,7 @@ class MainWindow(wx.Frame):
         self.Bind(EVT_LAYER_ADD, self.__on_layer_add)
         self.Bind(EVT_LAYER_DUPLICATE, self.__on_layer_duplicate)
         self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
+        self.Bind(EVT_LAYER_SELECTED, self.__on_layer_selected)
         self.Bind(EVT_SWAP_LAYER, self.__on_swap_layer)
         self.Bind(EVT_UPDATE_VISIBILITY, self.__on_update_visibility)
 
@@ -307,6 +310,7 @@ class MainWindow(wx.Frame):
             self.canvas.destinations.move(index, dx=-math.ceil(self.canvas.scale_factor))
 
             self.saved = False
+            self.__update_properties()
             self.Refresh()
 
         elif keycode == wx.WXK_UP:
@@ -315,6 +319,7 @@ class MainWindow(wx.Frame):
             self.canvas.destinations.move(index, dy=-math.ceil(self.canvas.scale_factor))
 
             self.saved = False
+            self.__update_properties()
             self.Refresh()
 
         elif keycode == wx.WXK_RIGHT:
@@ -323,6 +328,7 @@ class MainWindow(wx.Frame):
             self.canvas.destinations.move(index, dx=math.ceil(self.canvas.scale_factor))
 
             self.saved = False
+            self.__update_properties()
             self.Refresh()
 
         elif keycode == wx.WXK_DOWN:
@@ -331,6 +337,7 @@ class MainWindow(wx.Frame):
             self.canvas.destinations.move(index, dy=math.ceil(self.canvas.scale_factor))
 
             self.saved = False
+            self.__update_properties()
             self.Refresh()
 
     def __on_layer_add(self, event: LayerAddEvent):
@@ -378,6 +385,7 @@ class MainWindow(wx.Frame):
 
         self.counter += 1
         self.saved = False
+        self.__update_properties()
         self.Refresh()
 
     def __on_layer_duplicate(self, event: LayerDuplicateEvent):
@@ -419,6 +427,7 @@ class MainWindow(wx.Frame):
 
         self.counter += 1
         self.saved = False
+        self.__update_properties()
         self.Refresh()
 
     def __on_layer_remove(self, event: LayerRemoveEvent):
@@ -463,7 +472,19 @@ class MainWindow(wx.Frame):
 
         self.__update_minimap(resize=True)
         self.saved = False
+        self.__update_properties()
         self.Refresh()
+
+    def __on_layer_selected(self, event: LayerSelectedEvent):
+        """Updates the layer properties in the inspector when a layer is
+        selected.
+
+        Parameters
+        ------------
+        event: LayerSelectedEvent
+        """
+        print("here")
+        self.__update_properties()
 
     def __on_left_down(self, event: wx.MouseEvent):
         """Processes mouse left button down events.
@@ -589,6 +610,7 @@ class MainWindow(wx.Frame):
             self.__update_minimap()
 
             self.saved = False
+            self.__update_properties()
             self.Refresh()
 
         # Pan camera
@@ -754,6 +776,30 @@ class MainWindow(wx.Frame):
 
         for path, bitmap in self.bitmaps.items():
             self.inspector.minimap.bitmaps[path] = self.__scale(bitmap, factor)
+
+    def __update_properties(self):
+        """Updates the layer properties in the inspector from the canvas."""
+        x_min = self.canvas.destinations.x.min()
+        y_min = self.canvas.destinations.y.min()
+
+        selected = self.inspector.layers.GetFirstSelected()
+        index = -(selected + 1)
+
+        factor = self.canvas.scale_factor
+        x = int((self.canvas.destinations.x[index] - x_min) / factor)
+        y = int((self.canvas.destinations.y[index] - y_min) / factor)
+        w = int(self.destinations.w[index])
+        h = int(self.destinations.h[index])
+        zoom = int(factor * 100)
+
+        self.inspector.layer_properties.x.SetValue(str(x))
+        self.inspector.layer_properties.y.SetValue(str(y))
+        self.inspector.layer_properties.w.SetValue(str(w))
+        self.inspector.layer_properties.h.SetValue(str(h))
+        self.inspector.layer_properties.zoom.SetValue(str(zoom) + "%")
+
+        if not self.inspector.layer_properties.z.GetValue():
+            self.inspector.layer_properties.z.SetValue(str(0))
 
     def __save(self):
         """Writes the current map to disk."""
