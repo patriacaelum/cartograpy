@@ -146,6 +146,7 @@ class MainWindow(wx.Frame):
         self.counter = 0
         self.paths = dict()
         self.bitmaps = dict()
+        self.filenames = dict()
         self.destinations = Rects()
 
         self.x_mouse = 0
@@ -349,6 +350,7 @@ class MainWindow(wx.Frame):
             the event is expected to have a `path` property.
         """
         layer_name = str(self.counter)
+        filename = os.path.join("img", os.path.basename(event.path))
 
         # Copy image to temporary directory
         temp_file = os.path.join(self.temp_dir, layer_name)
@@ -360,6 +362,7 @@ class MainWindow(wx.Frame):
 
         self.paths[self.counter] = temp_file
         self.bitmaps[temp_file] = bitmap
+        self.filenames[temp_file] = filename
         self.destinations.append(rect=destination)
 
         # Update canvas
@@ -377,11 +380,14 @@ class MainWindow(wx.Frame):
         self.inspector.minimap.destinations.append(rect=destination)
         self.__update_minimap(resize=True)
 
-        # Update inspector
+        # Update inspector layer
         self.inspector.layers.InsertItem(0, f"layer_{self.counter}")
         self.inspector.layers.SetItemData(0, self.counter)
         self.inspector.layers.CheckItem(0)
         self.inspector.layers.Select(0)
+
+        # Update inspector layer properties
+        self.inspector.layer_properties.filename.SetValue(filename)
 
         self.counter += 1
         self.saved = False
@@ -524,7 +530,10 @@ class MainWindow(wx.Frame):
         for i in range(self.inspector.layers.GetItemCount()):
             key = self.inspector.layers.GetItemText(i)
             index = self.inspector.layers.GetItemData(i)
-            value = {"position": self.canvas.destiations[i].to_dict()}
+            value = {
+                "filename": self.filenames[self.paths[index]],
+                "position": self.canvas.destinations[index].to_dict(),
+            }
 
             data[key] = value
 
