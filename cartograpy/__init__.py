@@ -24,6 +24,7 @@ LayerForwardEvent, EVT_LAYER_FORWARD = NewEvent()
 LayerRemoveEvent, EVT_LAYER_REMOVE = NewEvent()
 LayerSelectedEvent, EVT_LAYER_SELECTED = NewEvent()
 SwapLayerEvent, EVT_SWAP_LAYER = NewEvent()
+UpdateFilenameEvent, EVT_UPDATE_FILENAME = NewEvent()
 UpdateVisibilityEvent, EVT_UPDATE_VISIBILITY = NewEvent()
 
 

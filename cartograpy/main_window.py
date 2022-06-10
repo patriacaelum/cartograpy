@@ -30,12 +30,14 @@ from cartograpy import (
     EVT_LAYER_REMOVE,
     EVT_LAYER_SELECTED,
     EVT_SWAP_LAYER,
+    EVT_UPDATE_FILENAME,
     EVT_UPDATE_VISIBILITY,
     LayerAddEvent,
     LayerDuplicateEvent,
     LayerRemoveEvent,
     LayerSelectedEvent,
     SwapLayerEvent,
+    UpdateFilenameEvent,
     UpdateVisibilityEvent,
     Rect,
     Rects,
@@ -113,6 +115,7 @@ class MainWindow(wx.Frame):
         self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
         self.Bind(EVT_LAYER_SELECTED, self.__on_layer_selected)
         self.Bind(EVT_SWAP_LAYER, self.__on_swap_layer)
+        self.Bind(EVT_UPDATE_FILENAME, self.__on_update_filename)
         self.Bind(EVT_UPDATE_VISIBILITY, self.__on_update_visibility)
 
         self.reset()
@@ -711,6 +714,15 @@ class MainWindow(wx.Frame):
 
         self.saved = False
         self.Refresh()
+
+    def __on_update_filename(self, event: UpdateFilenameEvent):
+        """Updates the filename property.
+
+        Parameters
+        ------------
+        event: UpdateFilenameEvent
+        """
+        self.filenames[self.paths[event.index]] = event.filename
 
     def __on_update_visibility(self, event: UpdateVisibilityEvent):
         """Updates the visibility of the currently selected layer.

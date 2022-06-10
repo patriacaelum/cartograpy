@@ -11,6 +11,7 @@ from cartograpy import (
     EVT_LAYER_FORWARD,
     EVT_LAYER_REMOVE,
     EVT_SWAP_LAYER,
+    EVT_UPDATE_FILENAME,
     EVT_UPDATE_VISIBILITY,
     LayerAddEvent,
     LayerBackwardEvent,
@@ -19,6 +20,7 @@ from cartograpy import (
     LayerRemoveEvent,
     LayerSelectedEvent,
     SwapLayerEvent,
+    UpdateFilenameEvent,
     UpdateVisibilityEvent,
 )
 from cartograpy.layer_menu import LayerMenu
@@ -74,6 +76,7 @@ class Inspector(wx.Panel):
         self.Bind(EVT_LAYER_DUPLICATE, self.__on_layer_duplicate)
         self.Bind(EVT_LAYER_FORWARD, self.__on_layer_forward)
         self.Bind(EVT_LAYER_REMOVE, self.__on_layer_remove)
+        self.Bind(EVT_UPDATE_FILENAME, self.__on_update_filename)
 
         self.reset()
 
@@ -217,6 +220,21 @@ class Inspector(wx.Panel):
         event: wx.ListEvent
         """
         wx.PostEvent(self.Parent, UpdateVisibilityEvent())
+
+    def __on_update_filename(self, event: UpdateFilenameEvent):
+        """When the filename property has been changed.
+
+        Parameters
+        ------------
+        event: UpdateFilenameEvent
+        """
+        wx.PostEvent(
+            self.Parent, 
+            UpdateFilenameEvent(
+                filename=event.filename,
+                index=self.layers.GetFirstSelected(),
+            ),
+        )
 
     def __size_widgets(self):
         """Generates the layout for the inspector panel."""

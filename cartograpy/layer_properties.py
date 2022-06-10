@@ -5,7 +5,7 @@ layer in the inspector.
 
 import wx
 
-from cartograpy import ALL_EXPAND
+from cartograpy import ALL_EXPAND, UpdateFilenameEvent
 
 
 class LayerProperties(wx.Panel):
@@ -23,6 +23,8 @@ class LayerProperties(wx.Panel):
 
         self.__init_widgets()
         self.__size_widgets()
+
+        self.Bind(wx.EVT_TEXT, self.__on_text_filename, id=self.filename.GetId())
 
     def __init_widgets(self):
         """Initializes the layer properties widgets."""
@@ -53,6 +55,15 @@ class LayerProperties(wx.Panel):
 
         self.isolate_label = wx.StaticText(parent=self, label="Isolate z")
         self.isolate = wx.CheckBox(parent=self, label="Enable")
+
+    def __on_text_filename(self, event: wx.CommandEvent):
+        """When the filename property is changed.
+        
+        Parameters
+        ------------
+        event: wx.CommandEvent
+        """
+        wx.PostEvent(self.Parent, UpdateFilenameEvent(filename=self.filename.GetValue()))
 
     def __size_widgets(self):
         """Places all the initialized widgets in the panel."""
