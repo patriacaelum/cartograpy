@@ -45,6 +45,9 @@ class LayerProperties(wx.Panel):
         self.h_label = wx.StaticText(parent=self, label="h")
         self.h = wx.TextCtrl(parent=self, size=(240, -1))
 
+        self.filename_label = wx.StaticText(parent=self, label="Filename")
+        self.filename = wx.TextCtrl(parent=self, size=(240, -1))
+
         self.zoom_label = wx.StaticText(parent=self, label="Zoom")
         self.zoom = wx.TextCtrl(parent=self, size=(240, -1))
 
@@ -72,6 +75,9 @@ class LayerProperties(wx.Panel):
 
         sizer.Add(window=self.h_label, flag=ALL_EXPAND)
         sizer.Add(window=self.h, flag=ALL_EXPAND)
+
+        sizer.Add(window=self.filename_label, flag=ALL_EXPAND)
+        sizer.Add(window=self.filename, flag=ALL_EXPAND)
 
         sizer.Add(window=self.zoom_label, flag=ALL_EXPAND)
         sizer.Add(window=self.zoom, flag=ALL_EXPAND)
