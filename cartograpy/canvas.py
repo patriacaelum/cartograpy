@@ -95,7 +95,9 @@ class Canvas(wx.Panel):
             self.scale_factor = 1
 
         else:
-            self.scale_factor = (abs(self.zoom_level) + 1)**(self.zoom_level / abs(self.zoom_level))
+            self.scale_factor = (abs(self.zoom_level) + 1) ** (
+                self.zoom_level / abs(self.zoom_level)
+            )
 
     def __to_parent(self, event: wx.Event):
         """Passes the event to the parent object."""

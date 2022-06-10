@@ -89,7 +89,14 @@ class Inspector(wx.Panel):
             the JSON compatible state of the inspector.
         """
         data = {
-            "layers": [{"text": self.layers.GetItemText(i), "data": self.layers.GetItemData(i), "checked": self.layers.IsItemChecked(i)} for i in range(self.layers.GetItemCount())],
+            "layers": [
+                {
+                    "text": self.layers.GetItemText(i),
+                    "data": self.layers.GetItemData(i),
+                    "checked": self.layers.IsItemChecked(i),
+                }
+                for i in range(self.layers.GetItemCount())
+            ],
             "minimap": self.minimap.to_dict(),
         }
 
@@ -109,10 +116,10 @@ class Inspector(wx.Panel):
             pos=wx.DefaultPosition,
             size=wx.DefaultSize,
             style=wx.LC_REPORT
-                | wx.LC_ALIGN_LEFT
-                | wx.LC_NO_HEADER
-                | wx.LC_SINGLE_SEL
-                | wx.LC_HRULES,
+            | wx.LC_ALIGN_LEFT
+            | wx.LC_NO_HEADER
+            | wx.LC_SINGLE_SEL
+            | wx.LC_HRULES,
             validator=wx.DefaultValidator,
             name="Layers",
         )
@@ -229,7 +236,7 @@ class Inspector(wx.Panel):
         event: UpdateFilenameEvent
         """
         wx.PostEvent(
-            self.Parent, 
+            self.Parent,
             UpdateFilenameEvent(
                 filename=event.filename,
                 index=self.layers.GetFirstSelected(),

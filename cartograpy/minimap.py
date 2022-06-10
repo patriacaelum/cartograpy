@@ -32,6 +32,7 @@ class Minimap(wx.Panel):
     parent: wx.Frame
         The parent window of this component.
     """
+
     def __init__(self, parent: wx.Frame):
         super().__init__(parent=parent, size=wx.Size(400, 400))
 

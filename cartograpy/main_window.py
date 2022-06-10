@@ -22,8 +22,8 @@ import numpy as np
 import wx
 
 from cartograpy import (
-    ROOT_DIR, 
-    ASSET_DIR, 
+    ROOT_DIR,
+    ASSET_DIR,
     ALL_EXPAND,
     EVT_LAYER_ADD,
     EVT_LAYER_DUPLICATE,
@@ -99,15 +99,33 @@ class MainWindow(wx.Frame):
         self.Bind(wx.EVT_KEY_DOWN, self.__on_key_down)
 
         # Menu events
-        self.Bind(wx.EVT_MENU, self.__on_menubar_file_new, id=self.menubar_file_new.GetId())
-        self.Bind(wx.EVT_MENU, self.__on_menubar_file_open, id=self.menubar_file_open.GetId())
-        self.Bind(wx.EVT_MENU, self.__on_menubar_file_save, id=self.menubar_file_save.GetId())
-        self.Bind(wx.EVT_MENU, self.__on_menubar_file_save_as, id=self.menubar_file_save_as.GetId())
-        self.Bind(wx.EVT_MENU, self.__on_menubar_file_export_as, id=self.menubar_file_export_as.GetId())
-        self.Bind(wx.EVT_MENU, self.__on_menubar_file_quit, id=self.menubar_file_quit.GetId())
+        self.Bind(
+            wx.EVT_MENU, self.__on_menubar_file_new, id=self.menubar_file_new.GetId()
+        )
+        self.Bind(
+            wx.EVT_MENU, self.__on_menubar_file_open, id=self.menubar_file_open.GetId()
+        )
+        self.Bind(
+            wx.EVT_MENU, self.__on_menubar_file_save, id=self.menubar_file_save.GetId()
+        )
+        self.Bind(
+            wx.EVT_MENU,
+            self.__on_menubar_file_save_as,
+            id=self.menubar_file_save_as.GetId(),
+        )
+        self.Bind(
+            wx.EVT_MENU,
+            self.__on_menubar_file_export_as,
+            id=self.menubar_file_export_as.GetId(),
+        )
+        self.Bind(
+            wx.EVT_MENU, self.__on_menubar_file_quit, id=self.menubar_file_quit.GetId()
+        )
 
         # Tool events
-        self.Bind(wx.EVT_TOOL, self.__on_tool_colourpicker, id=self.tool_colourpicker.GetId())
+        self.Bind(
+            wx.EVT_TOOL, self.__on_tool_colourpicker, id=self.tool_colourpicker.GetId()
+        )
 
         # Custom layer events
         self.Bind(EVT_LAYER_ADD, self.__on_layer_add)
@@ -298,7 +316,7 @@ class MainWindow(wx.Frame):
 
         self.toolbar.Realize()
 
-    def __on_key_down(self, event: wx.KeyEvent): 
+    def __on_key_down(self, event: wx.KeyEvent):
         """Processes keyboard events.
 
         Parameters
@@ -311,7 +329,9 @@ class MainWindow(wx.Frame):
         if keycode == wx.WXK_LEFT:
             selected = self.inspector.layers.GetFirstSelected()
             index = -(selected + 1)
-            self.canvas.destinations.move(index, dx=-math.ceil(self.canvas.scale_factor))
+            self.canvas.destinations.move(
+                index, dx=-math.ceil(self.canvas.scale_factor)
+            )
 
             self.saved = False
             self.__update_properties()
@@ -320,7 +340,9 @@ class MainWindow(wx.Frame):
         elif keycode == wx.WXK_UP:
             selected = self.inspector.layers.GetFirstSelected()
             index = -(selected + 1)
-            self.canvas.destinations.move(index, dy=-math.ceil(self.canvas.scale_factor))
+            self.canvas.destinations.move(
+                index, dy=-math.ceil(self.canvas.scale_factor)
+            )
 
             self.saved = False
             self.__update_properties()
@@ -373,8 +395,10 @@ class MainWindow(wx.Frame):
         self.canvas.visibility.append(False)
         self.canvas.paths[self.counter] = temp_file
         self.canvas.bitmaps[temp_file] = self.__scale(bitmap, self.canvas.scale_factor)
-        self.canvas.destinations.append(rect=destination.scale(self.canvas.scale_factor))
-    
+        self.canvas.destinations.append(
+            rect=destination.scale(self.canvas.scale_factor)
+        )
+
         # Update minimap
         self.inspector.minimap.order.append(self.counter)
         self.inspector.minimap.visibility.append(False)
@@ -550,7 +574,7 @@ class MainWindow(wx.Frame):
         ------------
         event: wx.MenuEvent
             contains information about the menu event.
-        """ 
+        """
         if self.__continue:
             self.reset()
 
@@ -656,17 +680,25 @@ class MainWindow(wx.Frame):
 
         if rotation > 0:
             self.canvas.zoom(dz=1)
-        
+
         elif rotation < 0:
             self.canvas.zoom(dz=-1)
-        
+
         # Update destinations
         n_layers = len(self.canvas.destinations)
 
-        self.canvas.destinations.rects[0] = np.full(n_layers, x) - (self.canvas.scale_factor / old_factor) * (np.full(n_layers, x) - self.canvas.destinations.x)
-        self.canvas.destinations.rects[1] = np.full(n_layers, y) - (self.canvas.scale_factor / old_factor) * (np.full(n_layers, y) - self.canvas.destinations.y)
-        self.canvas.destinations.rects[2] = self.destinations.w * self.canvas.scale_factor
-        self.canvas.destinations.rects[3] = self.destinations.h * self.canvas.scale_factor
+        self.canvas.destinations.rects[0] = np.full(n_layers, x) - (
+            self.canvas.scale_factor / old_factor
+        ) * (np.full(n_layers, x) - self.canvas.destinations.x)
+        self.canvas.destinations.rects[1] = np.full(n_layers, y) - (
+            self.canvas.scale_factor / old_factor
+        ) * (np.full(n_layers, y) - self.canvas.destinations.y)
+        self.canvas.destinations.rects[2] = (
+            self.destinations.w * self.canvas.scale_factor
+        )
+        self.canvas.destinations.rects[3] = (
+            self.destinations.h * self.canvas.scale_factor
+        )
 
         for path, bitmap in self.bitmaps.items():
             self.canvas.bitmaps[path] = self.__scale(bitmap, self.canvas.scale_factor)
@@ -704,13 +736,29 @@ class MainWindow(wx.Frame):
         i = -(i + 1)
         j = -(j + 1)
 
-        self.canvas.order[i], self.canvas.order[j] = self.canvas.order[j], self.canvas.order[i]
-        self.canvas.visibility[i], self.canvas.visibility[j] = self.canvas.visibility[j], self.canvas.visibility[i]
-        self.canvas.destinations.rects[:,[i,j]] = self.canvas.destinations.rects[:,[j,i]]
+        self.canvas.order[i], self.canvas.order[j] = (
+            self.canvas.order[j],
+            self.canvas.order[i],
+        )
+        self.canvas.visibility[i], self.canvas.visibility[j] = (
+            self.canvas.visibility[j],
+            self.canvas.visibility[i],
+        )
+        self.canvas.destinations.rects[:, [i, j]] = self.canvas.destinations.rects[
+            :, [j, i]
+        ]
 
-        self.inspector.minimap.order[i], self.inspector.minimap.order[j] = self.inspector.minimap.order[j], self.inspector.minimap.order[i]
-        self.inspector.minimap.visibility[i], self.inspector.minimap.visibility[j] = self.inspector.minimap.visibility[j], self.inspector.minimap.visibility[i]
-        self.inspector.minimap.destinations.rects[:,[i,j]] = self.inspector.minimap.destinations.rects[:,[j,i]]
+        self.inspector.minimap.order[i], self.inspector.minimap.order[j] = (
+            self.inspector.minimap.order[j],
+            self.inspector.minimap.order[i],
+        )
+        self.inspector.minimap.visibility[i], self.inspector.minimap.visibility[j] = (
+            self.inspector.minimap.visibility[j],
+            self.inspector.minimap.visibility[i],
+        )
+        self.inspector.minimap.destinations.rects[
+            :, [i, j]
+        ] = self.inspector.minimap.destinations.rects[:, [j, i]]
 
         self.saved = False
         self.Refresh()
@@ -736,7 +784,9 @@ class MainWindow(wx.Frame):
         index = -(selected + 1)
 
         self.canvas.visibility[index] = not self.canvas.visibility[index]
-        self.inspector.minimap.visibility[index] = not self.inspector.minimap.visibility[index]
+        self.inspector.minimap.visibility[
+            index
+        ] = not self.inspector.minimap.visibility[index]
 
         self.saved = False
         self.Refresh()
@@ -778,10 +828,18 @@ class MainWindow(wx.Frame):
         # Update destinations
         n_layers = len(self.canvas.destinations)
 
-        self.inspector.minimap.destinations.rects[0] = (self.canvas.destinations.x - np.full(n_layers, x_min)) * factor
-        self.inspector.minimap.destinations.rects[1] = (self.canvas.destinations.y - np.full(n_layers, y_min)) * factor
-        self.inspector.minimap.destinations.rects[2] = self.canvas.destinations.w * factor
-        self.inspector.minimap.destinations.rects[3] = self.canvas.destinations.h * factor
+        self.inspector.minimap.destinations.rects[0] = (
+            self.canvas.destinations.x - np.full(n_layers, x_min)
+        ) * factor
+        self.inspector.minimap.destinations.rects[1] = (
+            self.canvas.destinations.y - np.full(n_layers, y_min)
+        ) * factor
+        self.inspector.minimap.destinations.rects[2] = (
+            self.canvas.destinations.w * factor
+        )
+        self.inspector.minimap.destinations.rects[3] = (
+            self.canvas.destinations.h * factor
+        )
 
         self.inspector.minimap.camera.x = int(-x_min * factor)
         self.inspector.minimap.camera.y = int(-y_min * factor)
@@ -862,7 +920,11 @@ class MainWindow(wx.Frame):
     @staticmethod
     def __scale(bitmap, scale):
         """Scales a bitmap."""
-        return bitmap.ConvertToImage().Scale(
-            width=int(bitmap.GetWidth() * scale), 
-            height=int(bitmap.GetHeight() * scale)
-        ).ConvertToBitmap()
+        return (
+            bitmap.ConvertToImage()
+            .Scale(
+                width=int(bitmap.GetWidth() * scale),
+                height=int(bitmap.GetHeight() * scale),
+            )
+            .ConvertToBitmap()
+        )
