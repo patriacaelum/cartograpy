@@ -58,12 +58,14 @@ class LayerProperties(wx.Panel):
 
     def __on_text_filename(self, event: wx.CommandEvent):
         """When the filename property is changed.
-        
+
         Parameters
         ------------
         event: wx.CommandEvent
         """
-        wx.PostEvent(self.Parent, UpdateFilenameEvent(filename=self.filename.GetValue()))
+        wx.PostEvent(
+            self.Parent, UpdateFilenameEvent(filename=self.filename.GetValue())
+        )
 
     def __size_widgets(self):
         """Places all the initialized widgets in the panel."""
